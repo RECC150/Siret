@@ -1,0 +1,116 @@
+/* --- Ajustes base para centrar correctamente --- */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* contenedor externo: ocupa toda la pantalla y centra */
+.app-center {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem; /* evita pegarse a los bordes en móvil */
+  background: linear-gradient(90deg, #c56b90, #42160e); /* opcional */
+}
+
+/* tarjeta principal */
+.centered-card {
+  width: 100%;
+  max-width: 1000px;       /* controla el ancho máximo global */
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;  /* por defecto columna en móvil */
+  align-items: stretch;
+  min-height: 520px;       /* garantiza algo de altura para centrar verticalmente */
+}
+
+
+
+/* paneles */
+.left-pane, .right-pane {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem;
+}
+
+/* En pantallas grandes mostrar en fila (imagen + form) */
+@media (min-width: 1024px) {
+  .centered-card {
+    flex-direction: row;
+    min-height: 420px;     /* menor altura si quieres más compacta en desktop */
+  }
+}
+
+/* ancho de paneles en desktop */
+@media (min-width: 1024px) {
+  .left-pane { width: 50%; background: #fff; }
+  .right-pane { width: 50%; background: #fff; }
+}
+
+/* ocultar el panel izquierdo en móvil para que el formulario sea centrado y ancho correcto */
+@media (max-width: 1023px) {
+  .left-pane { display: none; }
+  .centered-card { min-height: 100vh; justify-content: center; } /* centra verticalmente en móvil */
+}
+
+/* imagen en left-pane */
+.left-pane img {
+  max-width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  display: block;
+}
+
+/* contenedor del formulario (centra el form y limita ancho) */
+.form-wrapper {
+  width: 100%;
+  max-width: 420px;    /* controla el ancho de tu formulario */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* títulos y textos (puedes mantener utilidades Tailwind si lo prefieres) */
+.form-wrapper h2 { margin: 0 0 0.5rem 0; }
+.form-wrapper p { margin: 0 0 1rem 0; color: #464646; }
+
+/* inputs y botón: estilos consistentes */
+.form-wrapper input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  font-size: 1rem;
+  color: #111827;
+  background: #fff;
+  box-sizing: border-box;
+}
+.form-wrapper input:focus {
+  outline: none;
+  box-shadow: 0 0 0 6px rgba(59,130,246,0.06);
+  border-color: #60a5fa;
+}
+
+/* botón principal */
+.btn-primary, .form-wrapper button[type="submit"] {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 999px;
+  background: #7f1d1d;
+  color: #fff;
+  border: 0;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn-primary:hover { background: #991b1b; }
+
+/* errores */
+.input-error { border-color: #ef4444 !important; }
+.text-error { color: #ef4444; font-size: 0.875rem; margin-top: 0.35rem; }
