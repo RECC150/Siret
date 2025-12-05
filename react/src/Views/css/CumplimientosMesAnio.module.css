@@ -1,0 +1,12 @@
+
+body {
+  padding-top: 65px; /* Altura aproximada de la navbar */
+}
+
+.busqueda input:focus,
+.busqueda select:focus {
+  border-color: #85435e;
+  box-shadow: 0 0 5px rgba(194, 24, 91, 0.5);
+  background-color: #fff0f5;
+  color: #333;
+}

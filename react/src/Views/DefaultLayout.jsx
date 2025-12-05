@@ -1,15 +1,16 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useStateContext } from "../Contexts/ContextProvider";
 import { useEffect } from "react";
 import axiosClient from "../axios-client";
 import Navbar from "../Components/Navbar";
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function DefaultLayout() {
     const { user, token, setUser, setToken } = useStateContext();
 
-    // Si no hay token, redirige al login.
+    // Si no hay token, redirige al inicio.
     if (!token) {
-        return <Navigate to="/Login" />;
+        return <Navigate to="/inicio" />;
     }
 
     const onLogout = (ev) => {
@@ -41,14 +42,23 @@ export default function DefaultLayout() {
             });
     }, []);
 
+    const location = useLocation();
     return (
         <div className="min-h-screen">
-            <Navbar onLogout={onLogout}/>
-            {/* Contenedor principal que ocupa el espacio disponible */}
-            <main className=
-            "p-14 w-full min-h-screen bg-gradient-to-l from-blue-950 via-pink-950 to-blue-950 background-animate">
-                <Outlet />
+            <Navbar onLogout={onLogout} />
+            <main className="p-14 w-full min-h-screen bg-gradient-to-l from-blue-950 via-pink-950 to-blue-950 background-animate">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={location.pathname}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeOut' }}
+                    >
+                        <Outlet />
+                    </motion.div>
+                </AnimatePresence>
             </main>
-        </div>
-    );
+        </div>
+    );
 }

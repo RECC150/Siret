@@ -3,12 +3,85 @@ import { useNavigate } from "react-router-dom";
 import axiosClient from "../axios-client.js";
 import { useStateContext } from "../Contexts/ContextProvider.jsx";
 import { toast } from "react-toastify";
+import "./css/inicio.css";
+import "./js/inicio.js";
+import ASEBCS from "../assets/asebcs.jpg";
+import grupal from "../assets/grupal.jpg";
+import SemaforoVerde from "../assets/SemaforoVerde.png";
+import SemaforoAmarillo from "../assets/SemaforoAmarillo.png";
+import SemaforoRojo from "../assets/SemaforoRojo.png";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 
 export default function Inicio() {
+  const [open, setOpen] = useState(null);
+  const navigate = useNavigate();
 
-  const onSubmit = async (ev) => {
+  const onSubmit = async (ev) => {};
 
+  const toggle = (idx) => {
+    setOpen(open === idx ? null : idx);
+  };
+  // Cargar todas las imágenes de la carpeta Views/Imagenes y crear un mapa filename -> url
+  // Use import.meta.glob with eager:true for compatibility
+  const importedImages = import.meta.glob("./Imagenes/*.{png,jpg,jpeg,svg}", { eager: true });
+  const imagesMap = Object.entries(importedImages).reduce((acc, [path, module]) => {
+    const filename = path.split('/').pop();
+    acc[filename] = module.default;
+    return acc;
+  }, {});
+
+  // Data para cuadros (usa el nombre de archivo, p.ej. 'a.png')
+  const entes = [
+    {
+      id: 1,
+      title: "Congreso del Estado de Baja California Sur",
+      img: imagesMap["a.png"] || Object.values(imagesMap)[0] || "",
+      description:
+        "Equipo ficticio de ejemplo. Aquí puedes colocar una descripción más larga y enlaces a documentos.",
+      link: "/Marines%20Espaciales.html",
+    },
+    {
+      id: 2,
+      title: "Institución Ejemplo",
+      img: imagesMap["placeholder.png"] || Object.values(imagesMap)[1] || Object.values(imagesMap)[0] || "",
+      description: "Otra entidad de ejemplo. Reemplaza con datos reales o trae desde la API.",
+      link: "/institucion.html",
+    },
+  ];
+
+  const [selected, setSelected] = useState(null);
+  const [modalClosing, setModalClosing] = useState(false);
+
+  // close modal on Esc (keep up-to-date with `selected`)
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape" && selected) {
+        startClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
+  // Manage body/main classes to prevent background interaction when modal open
+  React.useEffect(() => {
+    if (selected) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+  }, [selected]);
+
+  const startClose = (delay = 260) => {
+    // trigger closing animation then unmount
+    setModalClosing(true);
+    // wait for animation to finish
+    setTimeout(() => {
+      setModalClosing(false);
+      setSelected(null);
+    }, delay);
   };
 
   return (
@@ -17,14 +90,8 @@ export default function Inicio() {
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <div className="container-fluid">
           <a className="navbar-brand d-flex align-items-center" href="#">
-            <img
-              src="imagenes/ASEBCS.jpg"
-              alt="Logo SIRET"
-              width="80"
-              height="40"
-              className="me-2"
-            />
-            SIRET
+              <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
+            Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur
           </a>
           <button
             className="navbar-toggler"
@@ -33,39 +100,49 @@ export default function Inicio() {
             data-bs-target="#navbarNav"
             aria-controls="navbarNav"
             aria-expanded="false"
-            aria-label="Toggle navigation"
+            aria-label="Toggle navigaltion"
           >
             <span className="navbar-toggler-icon"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <a className="nav-link active" href="#indicadores">
-                  Indicadores
+                <li className="nav-item">
+                <a className="nav-link active" href="#Inicio">
+                  Inicio
                 </a>
               </li>
-              <li className="nav-item">
-                <a className="nav-link" href="#graficas">
-                  Gráficas
+              <li className="nav-item dropdown">
+                <a
+                  className="nav-link dropdown-toggle"
+                  href="#"
+                  id="cumplimientosDropdown"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Cumplimientos
                 </a>
+                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="cumplimientosDropdown">
+                  <li>
+                    <a className="dropdown-item" href="/cumplimientos/mes-anio">Por mes y año</a>
+                  </li>
+                  <li>
+                    <a className="dropdown-item" href="/cumplimientos/por-ente">Por ente</a>
+                  </li>
+                  <li>
+                    <a className="dropdown-item" href="/cumplimientos/por-clasificacion">Por clasificación de entes</a>
+                  </li>
+                  <li><a className="dropdown-item" href="/comparativa">Comparativa</a></li>
+                </ul>
               </li>
-              <li className="nav-item">
-                <a className="nav-link" href="#reportes">
-                  Reportes
-                </a>
-              </li>
-              <li className="nav-item">
-                <a className="nav-link" href="#descargas">
-                  Descargas
-                </a>
-              </li>
+
             </ul>
           </div>
         </div>
       </nav>
 
       {/* Encabezado */}
-      <header className="bg-primary text-white text-center py-4 mt-5">
+      <header className="bg-primary text-white text-center py-4">
         <h1>Auditoría Superior del Estado de Baja California Sur</h1>
         <p className="lead">
           Monitoreo de Cumplimiento en la Entrega de Informes Mensuales y
@@ -78,11 +155,7 @@ export default function Inicio() {
         <section id="asebcs" className="mb-5">
           <div className="row align-items-center">
             <div className="col-md-6">
-              <img
-                src="imagenes/grupal.jpg"
-                alt="Equipo ASEBCS"
-                className="img-fluid rounded shadow"
-              />
+              <img src={grupal} alt="Equipo ASEBCS" className="img-fluid rounded shadow" />
             </div>
             <div className="col-md-6">
               <div className="bg-maroon text-white p-4 rounded shadow-sm">
@@ -107,15 +180,16 @@ export default function Inicio() {
         {/* Semáforo de Cumplimiento */}
         <section id="semaforo" className="mb-5">
           <hr className="linea mb-4" />
-          <h2 className="mb-4">🚦 Semáforo de Cumplimiento</h2>
+          <h2 className="mb-4">Semáforos de Cumplimiento</h2>
           <div className="d-flex flex-wrap justify-content-center gap-4">
             {/* Verde */}
-            <div className="semaforo-card bg-success text-white">
-              <img
-                src="imagenes/SemaforoVerde.png"
-                alt="Cumplimiento Total"
-                className="semaforo-icon"
-              />
+            <button
+              type="button"
+              className={`semaforo-card bg-success text-white ${open === 0 ? "expanded" : ""}`}
+              aria-expanded={open === 0}
+              onClick={() => toggle(0)}
+            >
+              <img src={SemaforoVerde} alt="Cumplimiento Total" className="semaforo-icon" />
               <div className="semaforo-info">
                 <p>
                   Cumple en tiempo y forma con el 100% de la información
@@ -124,15 +198,16 @@ export default function Inicio() {
                   información financiera mensual y Cuenta Pública.
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Amarillo */}
-            <div className="semaforo-card bg-warning text-dark">
-              <img
-                src="imagenes/SemaforoAmarillo.png"
-                alt="Cumplimiento Parcial"
-                className="semaforo-icon"
-              />
+            <button
+              type="button"
+              className={`semaforo-card bg-warning text-dark ${open === 1 ? "expanded" : ""}`}
+              aria-expanded={open === 1}
+              onClick={() => toggle(1)}
+            >
+              <img src={SemaforoAmarillo} alt="Cumplimiento Parcial" className="semaforo-icon" />
               <div className="semaforo-info">
                 <p>
                   No cumple en tiempo y forma con el 100% de la información
@@ -141,26 +216,76 @@ export default function Inicio() {
                   información financiera mensual y Cuenta Pública.
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Rojo */}
-            <div className="semaforo-card bg-danger text-white">
-              <img
-                src="imagenes/SemaforoRojo.png"
-                alt="Sin Información"
-                className="semaforo-icon"
-              />
+            <button
+              type="button"
+              className={`semaforo-card bg-danger text-white ${open === 2 ? "expanded" : ""}`}
+              aria-expanded={open === 2}
+              onClick={() => toggle(2)}
+            >
+              <img src={SemaforoRojo} alt="Sin Información" className="semaforo-icon" />
               <div className="semaforo-info">
                 <p>No presentó información.</p>
               </div>
-            </div>
+            </button>
           </div>
         </section>
 
+        {/* Entes */}
+        <section id="cumplimientos" className="mb-5">
+          <hr className="linea mb-4" />
+          <h2 className="mb-4">Entes</h2>
+
+        </section>
+
+        <div className="contenedor-cuadros">
+          {entes.map((ente) => (
+            <div
+              key={ente.id}
+              className={`cuadro ${selected?.id === ente.id ? "active" : ""}`}
+              onClick={() => setSelected(ente)}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") setSelected(ente);
+              }}
+            >
+              <img src={ente.img} alt={ente.title} />
+              <h3>{ente.title}</h3>
+            </div>
+          ))}
+        </div>
+
+        {selected && (
+          <div className={`modal-overlay ${modalClosing ? "closing" : ""}`} onClick={() => startClose()}>
+            <div className={`modal-card ${modalClosing ? "closing" : ""}`} role="dialog" aria-modal="true" aria-label={selected.title} onClick={(e)=>e.stopPropagation()}>
+              <header style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <h3>{selected.title}</h3>
+                <button onClick={()=>startClose()} aria-label="Cerrar modal">✕</button>
+              </header>
+              <div className="modal-body">
+                <img src={selected.img} alt={selected.title} style={{maxWidth:'200px',height:'auto'}} />
+                <p>{selected.description}</p>
+                {selected.link && <a href={selected.link} className="btn btn-primary">Ver más</a>}
+              </div>
+            </div>
+          </div>
+        )}
+        <section id="cumplimientos" className="mb-5">
+          <hr className="linea mb-4" />
+          <h2 className="mb-4">Ver cumplimientos</h2>
+          <div className="d-flex gap-3">
+            <button className="btn btn-primary" onClick={() => navigate('/cumplimientos/mes-anio')}>Por mes y año</button>
+            <button className="btn btn-primary" onClick={() => navigate('/cumplimientos/por-ente')}>Por ente</button>
+            <button className="btn btn-primary" onClick={() => navigate('/cumplimientos/por-clasificacion')}>Por clasificación de entes</button>
+          </div>
+        </section>
         {/* Cumplimientos */}
         <section id="cumplimientos" className="mb-5">
           <hr className="linea mb-4" />
-          <h2 className="mb-4">📋 Cumplimientos</h2>
+          <h2 className="mb-4">Cumplimientos</h2>
 
           {/* Indicadores */}
           <div className="cumplimiento-item mb-3">
@@ -345,6 +470,7 @@ export default function Inicio() {
             </div>
           </div>
         </section>
+
       </main>
 
       {/* Footer */}
