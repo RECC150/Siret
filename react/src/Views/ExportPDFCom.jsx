@@ -12,7 +12,6 @@ export default function SiretExportPDF(){
 
   const [compliances, setCompliances] = useState([]);
   const [entes, setEntes] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pdfReady, setPdfReady] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -25,7 +24,7 @@ export default function SiretExportPDF(){
   useEffect(() => {
     if (years.length === 0) return;
     const load = async () => {
-      setLoading(true); setError(null);
+      setError(null);
       try {
         const [compRes, entesRes] = await Promise.all([
           fetch(`${apiBase}/compliances.php`),
@@ -49,7 +48,7 @@ export default function SiretExportPDF(){
       } catch (e) {
         setError('No se pudieron cargar los datos.');
         console.error(e);
-      } finally { setLoading(false); }
+      }
     };
     load();
   }, [years, month, apiBase]);
@@ -211,7 +210,7 @@ export default function SiretExportPDF(){
       };
 
       const clasificaciones = Object.keys(entesPorClasificacion);
-      const totalSteps = 1 + (clasificaciones.length * 2);
+      const totalSteps = 1 + years.length;
       let currentStep = 0;
 
       // ========== PRIMERA HOJA: Header + Gráficas generales ==========
@@ -333,121 +332,92 @@ export default function SiretExportPDF(){
       currentStep++;
       setProgress(Math.round((currentStep / totalSteps) * 100));
 
-      // ========== HOJAS POR CLASIFICACIÓN ==========
-      for (let idx = 0; idx < clasificaciones.length; idx++) {
-        const clasificacion = clasificaciones[idx];
-        const cantidadEntesClasif = entesPorClasificacion[clasificacion].length;
-        const icClasif = icPorClasificacion[clasificacion];
-        const entesDeClasificacion = entesPorClasificacion[clasificacion];
-
-        // Calcular IC por ente (fila)
-        const icPorEnte = entesDeClasificacion.map(row => {
-          let totalMeses = 0;
-          let cumplidos = 0;
-          monthsShort.forEach(ms => {
-            if (row[ms]) {
-              totalMeses++;
-              if (row[ms] === 'cumplio') cumplidos++;
-            }
-          });
-          return totalMeses > 0 ? ((cumplidos / totalMeses) * 100).toFixed(2) : 0;
-        });
-
-        // Calcular IC por mes (columna)
-        const icPorMes = monthsShort.map(ms => {
-          let totalEntes = 0;
-          let cumplidos = 0;
-          entesDeClasificacion.forEach(row => {
-            if (row[ms]) {
-              totalEntes++;
-              if (row[ms] === 'cumplio') cumplidos++;
-            }
-          });
-          return totalEntes > 0 ? ((cumplidos / totalEntes) * 100).toFixed(2) : 0;
-        });
-
-        // Calcular porcentajes
-        const entesIds = entes.filter(e => e.classification === clasificacion).map(e => e.id);
-        const compliancesClasif = compliances.filter(c => entesIds.includes(c.ente_id));
-        const totalRegistros = compliancesClasif.length;
-        const totalCumplio = compliancesClasif.filter(c => (c.status || '').toLowerCase() === 'cumplio').length;
-        const totalParcial = compliancesClasif.filter(c => (c.status || '').toLowerCase() === 'parcial').length;
-        const totalNo = compliancesClasif.filter(c => (c.status || '').toLowerCase() === 'no').length;
-        const pctCumplio = totalRegistros > 0 ? ((totalCumplio / totalRegistros) * 100).toFixed(1) : 0;
-        const pctParcial = totalRegistros > 0 ? ((totalParcial / totalRegistros) * 100).toFixed(1) : 0;
-        const pctNo = totalRegistros > 0 ? ((totalNo / totalRegistros) * 100).toFixed(1) : 0;
-
-        // ========== TABLA DE LA CLASIFICACIÓN ==========
+      // ========== HOJAS POR AÑO (TABLA GENERAL + GRÁFICAS) ==========
+      for (const year of years) {
+        // ========== PÁGINA 1: TABLA GENERAL DEL AÑO ==========
         pdf.addPage();
         yPos = margin;
 
-        // Header de clasificación
+        // Filtrar datos por año
+        const compYear = compliances.filter(c => parseInt(c.year, 10) === year);
+        const entesIdsYear = new Set(compYear.map(c => c.ente_id));
+        const entesActivosYear = entes.filter(e => entesIdsYear.has(e.id));
+
+        // Calcular IC general del año
+        let cumpliosYear = 0, posiblesYear = 0;
+        compYear.forEach(c => {
+          const status = (c.status || '').toLowerCase();
+          if (status) {
+            posiblesYear++;
+            if (status === 'cumplio') cumpliosYear++;
+          }
+        });
+        const icGeneralYear = posiblesYear > 0 ? ((cumpliosYear / posiblesYear) * 100).toFixed(1) : '0.0';
+
+        // Header con IC, Año y Entes (formato original)
         pdf.setFillColor(44, 62, 80);
         pdf.roundedRect(margin, yPos, pageWidth - (margin * 2), 30, 4, 4, 'F');
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(255, 255, 255);
-        pdf.text(clasificacion.toUpperCase(), pageWidth / 2, yPos + 19, { align: 'center' });
+        pdf.text(`IC: ${icGeneralYear}%`, margin + 10, yPos + 19);
+        pdf.text(`${year}`, pageWidth / 2, yPos + 19, { align: 'center' });
+        pdf.text(`Entes: ${entesActivosYear.length}`, pageWidth - margin - 10, yPos + 19, { align: 'right' });
         yPos += 40;
 
-        // Info IC y Entes - Con más separación
-        pdf.setFontSize(10);
-        pdf.setTextColor(44, 62, 80);
-        pdf.text(`IC: ${icClasif}%`, margin, yPos);
-        pdf.text(`Entes: ${cantidadEntesClasif}`, pageWidth - margin, yPos, { align: 'right' });
-        yPos += 15;
-
+        // Texto descriptivo
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
+        pdf.setTextColor(44, 62, 80);
         pdf.text('TABLAS DE CUMPLIMIENTO DE ENTREGA DE INFORMES MENSUALES', pageWidth / 2, yPos, { align: 'center' });
         yPos += 12;
-        pdf.text('A LA AUDITORÍA SUPERIOR DEL ESTADO DE BAJA CALIFORNIA SUR ' + years.join(', '), pageWidth / 2, yPos, { align: 'center' });
+        pdf.text('A LA AUDITORÍA SUPERIOR DEL ESTADO DE BAJA CALIFORNIA SUR', pageWidth / 2, yPos, { align: 'center' });
         yPos += 20;
 
-        // Tabla
+        // Tabla General
         const usableWidth = pageWidth - (margin * 2);
         const col1Width = usableWidth * 0.25;
-        const monthColWidth = (usableWidth - col1Width) / (monthsShort.length + 1);
-        const minRowHeight = 18;
-        const lineSpacing = 7;
+        const monthColWidthYear = (usableWidth - col1Width) / (monthsShort.length + 1);
+        const minRowHeight = 16;
+        const lineSpacing = 6;
 
-        const drawTableHeader = () => {
+        const drawTableHeaderYear = () => {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(7);
           pdf.setFillColor(52, 73, 94);
           pdf.setTextColor(255, 255, 255);
-          pdf.rect(margin, yPos, usableWidth, 20, 'F');
+          pdf.rect(margin, yPos, usableWidth, 18, 'F');
           pdf.setDrawColor(44, 62, 80);
-          pdf.setLineWidth(1);
-          pdf.rect(margin, yPos, col1Width, 20);
-          pdf.text('ENTES', margin + 5, yPos + 13);
+          pdf.setLineWidth(0.5);
+          pdf.rect(margin, yPos, col1Width, 18);
+          pdf.text('ENTES', margin + 5, yPos + 12);
 
           monthsShort.forEach((ms, msIdx) => {
-            const xCol = margin + col1Width + (msIdx * monthColWidth);
-            pdf.rect(xCol, yPos, monthColWidth, 20);
-            pdf.text(ms, xCol + (monthColWidth / 2), yPos + 13, { align: 'center' });
+            const xCol = margin + col1Width + (msIdx * monthColWidthYear);
+            pdf.rect(xCol, yPos, monthColWidthYear, 18);
+            pdf.text(ms, xCol + (monthColWidthYear / 2), yPos + 12, { align: 'center' });
           });
 
-          const icColX = margin + col1Width + (monthsShort.length * monthColWidth);
-          pdf.rect(icColX, yPos, monthColWidth, 20);
+          const icColX = margin + col1Width + (monthsShort.length * monthColWidthYear);
+          pdf.rect(icColX, yPos, monthColWidthYear, 18);
           pdf.setFillColor(44, 62, 80);
-          pdf.rect(icColX, yPos, monthColWidth, 20, 'F');
-          pdf.text('IC', icColX + (monthColWidth / 2), yPos + 13, { align: 'center' });
-          yPos += 20;
+          pdf.rect(icColX, yPos, monthColWidthYear, 18, 'F');
+          pdf.text('IC', icColX + (monthColWidthYear / 2), yPos + 12, { align: 'center' });
+          yPos += 18;
         };
 
-        drawTableHeader();
+        drawTableHeaderYear();
 
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7);
-        entesDeClasificacion.forEach((row, rowIdx) => {
-          const enteLines = pdf.splitTextToSize(row.ente, col1Width - 10);
-          const rowHeight = Math.max(minRowHeight, enteLines.length * lineSpacing + 6);
+        pdf.setFontSize(6);
+        entesActivosYear.forEach((row, rowIdx) => {
+          const enteLines = pdf.splitTextToSize(row.title, col1Width - 10);
+          const rowHeight = Math.max(minRowHeight, enteLines.length * lineSpacing + 4);
 
           if (yPos + rowHeight + 5 > pageHeight - margin) {
             pdf.addPage();
             yPos = margin;
-            drawTableHeader();
+            drawTableHeaderYear();
           }
 
           const bgColor = rowIdx % 2 === 0 ? [255, 255, 255] : [248, 249, 250];
@@ -455,178 +425,186 @@ export default function SiretExportPDF(){
           pdf.rect(margin, yPos, usableWidth, rowHeight, 'F');
 
           pdf.setTextColor(44, 62, 80);
-          pdf.setFont('helvetica', 'bold');
+          pdf.setFont('helvetica', 'normal');
           pdf.setDrawColor(222, 226, 230);
           pdf.setLineWidth(0.5);
           pdf.rect(margin, yPos, col1Width, rowHeight);
-          let textYPos = yPos + 10;
+          let textYPos = yPos + 8;
           enteLines.forEach(line => {
             pdf.text(line, margin + 5, textYPos, { align: 'left' });
             textYPos += lineSpacing;
           });
 
           monthsShort.forEach((ms, msIdx) => {
-            const status = row[ms];
-            const xCol = margin + col1Width + (msIdx * monthColWidth);
+            const monthName = monthsOrder[msIdx];
+            const comp = compYear.find(c => c.ente_id === row.id && c.month === monthName);
+            const status = comp ? (comp.status || '').toLowerCase() : null;
+            const xCol = margin + col1Width + (msIdx * monthColWidthYear);
             let cellColor = [255, 255, 255];
-            if (status === 'cumplio') cellColor = [45, 80, 22];
-            else if (status === 'parcial') cellColor = [255, 215, 0];
-            else if (status === 'no') cellColor = [220, 53, 69];
+            if (status === 'cumplio') { cellColor = [45, 80, 22]; }
+            else if (status === 'parcial') { cellColor = [255, 215, 0]; }
+            else if (status === 'no') { cellColor = [220, 53, 69]; }
             pdf.setFillColor(...cellColor);
-            pdf.rect(xCol, yPos, monthColWidth, rowHeight, 'FD');
+            pdf.rect(xCol, yPos, monthColWidthYear, rowHeight, 'FD');
           });
 
           // IC por ente
-          const icColX = margin + col1Width + (monthsShort.length * monthColWidth);
+          let cumplidos = 0, posibles = 0;
+          monthsShort.forEach((ms, idx) => {
+            const monthName = monthsOrder[idx];
+            const comp = compYear.find(c => c.ente_id === row.id && c.month === monthName);
+            const status = comp ? (comp.status || '').toLowerCase() : null;
+            if (status) {
+              posibles++;
+              if (status === 'cumplio') cumplidos++;
+            }
+          });
+          const icEnte = posibles ? ((cumplidos / posibles) * 100).toFixed(2) : '0.00';
+          const icColX = margin + col1Width + (monthsShort.length * monthColWidthYear);
           pdf.setFillColor(236, 240, 241);
-          pdf.rect(icColX, yPos, monthColWidth, rowHeight, 'FD');
+          pdf.rect(icColX, yPos, monthColWidthYear, rowHeight, 'FD');
           pdf.setTextColor(44, 62, 80);
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`${icPorEnte[rowIdx]}%`, icColX + (monthColWidth / 2), yPos + (rowHeight / 2) + 3, { align: 'center' });
+          pdf.text(`${icEnte}%`, icColX + (monthColWidthYear / 2), yPos + (rowHeight / 2) + 2, { align: 'center' });
 
           yPos += rowHeight;
         });
 
         // Fila IC por mes
-        const icRowHeight = 18;
+        const icRowHeight = 16;
         if (yPos + icRowHeight + 5 > pageHeight - margin) {
           pdf.addPage();
           yPos = margin;
-          drawTableHeader();
+          drawTableHeaderYear();
         }
 
         pdf.setFillColor(44, 62, 80);
         pdf.rect(margin, yPos, usableWidth, icRowHeight, 'F');
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(7);
         pdf.rect(margin, yPos, col1Width, icRowHeight, 'D');
-        pdf.text('IC', margin + 5, yPos + 12);
+        pdf.text('IC', margin + 5, yPos + 10);
 
         monthsShort.forEach((ms, msIdx) => {
-          const xCol = margin + col1Width + (msIdx * monthColWidth);
-          pdf.rect(xCol, yPos, monthColWidth, icRowHeight, 'D');
-          pdf.text(`${icPorMes[msIdx]}%`, xCol + (monthColWidth / 2), yPos + 12, { align: 'center' });
+          const monthName = monthsOrder[msIdx];
+          let cum = 0, pos = 0;
+          entesActivosYear.forEach(ente => {
+            const comp = compYear.find(c => c.ente_id === ente.id && c.month === monthName);
+            const status = comp ? (comp.status || '').toLowerCase() : null;
+            if (status) {
+              pos++;
+              if (status === 'cumplio') cum++;
+            }
+          });
+          const icMes = pos ? ((cum / pos) * 100).toFixed(2) : '0.00';
+          const xCol = margin + col1Width + (msIdx * monthColWidthYear);
+          pdf.rect(xCol, yPos, monthColWidthYear, icRowHeight, 'D');
+          pdf.text(`${icMes}%`, xCol + (monthColWidthYear / 2), yPos + 10, { align: 'center' });
         });
 
-        const icColX = margin + col1Width + (monthsShort.length * monthColWidth);
+        const icColX = margin + col1Width + (monthsShort.length * monthColWidthYear);
         pdf.setFillColor(26, 37, 47);
-        pdf.rect(icColX, yPos, monthColWidth, icRowHeight, 'FD');
-        pdf.text(`${icClasif}%`, icColX + (monthColWidth / 2), yPos + 12, { align: 'center' });
-
-        // Estadísticas de porcentajes
-        yPos += icRowHeight + 15;
-        const badgeY = yPos;
-        const badgeSpacing = 200;
-        let badgeX = (pageWidth - (badgeSpacing * 3)) / 2;
-
-        // Badge verde
-        pdf.setFillColor(248, 249, 250);
-        pdf.setDrawColor(45, 80, 22);
-        pdf.setLineWidth(2);
-        pdf.roundedRect(badgeX, badgeY, 180, 28, 3, 3, 'S');
-        pdf.setFillColor(45, 80, 22);
-        pdf.roundedRect(badgeX + 8, badgeY + 6, 16, 16, 2, 2, 'F');
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(44, 62, 80);
-        pdf.text(`Cumplió: ${pctCumplio}%`, badgeX + 30, badgeY + 18);
-
-        badgeX += badgeSpacing;
-        // Badge amarillo
-        pdf.setDrawColor(255, 215, 0);
-        pdf.roundedRect(badgeX, badgeY, 180, 28, 3, 3, 'S');
-        pdf.setFillColor(255, 215, 0);
-        pdf.roundedRect(badgeX + 8, badgeY + 6, 16, 16, 2, 2, 'F');
-        pdf.text(`No cumplió: ${pctParcial}%`, badgeX + 30, badgeY + 18);
-
-        badgeX += badgeSpacing;
-        // Badge rojo
-        pdf.setDrawColor(220, 53, 69);
-        pdf.roundedRect(badgeX, badgeY, 180, 28, 3, 3, 'S');
-        pdf.setFillColor(220, 53, 69);
-        pdf.roundedRect(badgeX + 8, badgeY + 6, 16, 16, 2, 2, 'F');
-        pdf.text(`No presentó: ${pctNo}%`, badgeX + 30, badgeY + 18);
+        pdf.rect(icColX, yPos, monthColWidthYear, icRowHeight, 'FD');
+        let totalCumpYear = 0, totalRegYear = 0;
+        entesActivosYear.forEach(ente => {
+          monthsShort.forEach((ms, idx) => {
+            const monthName = monthsOrder[idx];
+            const comp = compYear.find(c => c.ente_id === ente.id && c.month === monthName);
+            const status = comp ? (comp.status || '').toLowerCase() : null;
+            if (status) {
+              totalRegYear++;
+              if (status === 'cumplio') totalCumpYear++;
+            }
+          });
+        });
+        const icGlobalYear = totalRegYear > 0 ? ((totalCumpYear / totalRegYear) * 100).toFixed(2) : '0.00';
+        pdf.text(`${icGlobalYear}%`, icColX + (monthColWidthYear / 2), yPos + 10, { align: 'center' });
 
         currentStep++;
         setProgress(Math.round((currentStep / totalSteps) * 100));
 
-        // ========== GRÁFICAS DE LA CLASIFICACIÓN ==========
+        // ========== PÁGINA 2: GRÁFICAS DEL AÑO ==========
         pdf.addPage();
         yPos = margin;
 
         // Título
         pdf.setFillColor(236, 240, 241);
-        pdf.roundedRect(margin, yPos, pageWidth - (margin * 2), 35, 3, 3, 'F');
+        pdf.roundedRect(margin, yPos, pageWidth - (margin * 2), 25, 3, 3, 'F');
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
+        pdf.setFontSize(11);
         pdf.setTextColor(44, 62, 80);
-        pdf.text('GRÁFICAS DE CUMPLIMIENTO DE ENTREGA DE INFORMES MENSUALES', pageWidth / 2, yPos + 15, { align: 'center' });
-        pdf.text(`A LA AUDITORÍA SUPERIOR DEL ESTADO DE BAJA CALIFORNIA SUR ${years.join(', ')}`, pageWidth / 2, yPos + 27, { align: 'center' });
-        yPos += 50;
+        pdf.text(`Gráficas Año: ${year}`, pageWidth / 2, yPos + 16, { align: 'center' });
+        yPos += 35;
 
-        // Grid de gráficas mensuales para esta clasificación - Mismo tamaño que primera hoja
-        const availableWidth2 = pageWidth - (margin * 2);
-        const availableHeight2 = pageHeight - yPos - margin;
-        const chartSize2 = Math.min((availableWidth2 / cols) * 0.85, (availableHeight2 / rows) * 0.85);
-        const chartSpacingX2 = (availableWidth2 - (chartSize2 * cols)) / (cols + 1);
-        const chartSpacingY2 = (availableHeight2 - (chartSize2 * rows)) / (rows + 1);
-        const gridStartX2 = margin + chartSpacingX2 + (chartSize2 / 2);
-        const gridStartY2 = yPos + chartSpacingY2 + (chartSize2 / 2);
+        // Grid de gráficas mensuales
+        const cols = 4;
+        const rows = 3;
+        const availableWidth = pageWidth - (margin * 2);
+        const availableHeight = pageHeight - yPos - margin;
+        const chartSize = Math.min((availableWidth / cols) * 0.85, (availableHeight / rows) * 0.85);
+        const chartSpacingX = (availableWidth - (chartSize * cols)) / (cols + 1);
+        const chartSpacingY = (availableHeight - (chartSize * rows)) / (rows + 1);
+        const gridStartX = margin + chartSpacingX + (chartSize / 2);
+        const gridStartY = yPos + chartSpacingY + (chartSize / 2);
 
-        monthsOrder.forEach((m, midx) => {
-          const col = midx % cols;
-          const row = Math.floor(midx / cols);
-          const cx = gridStartX2 + (col * (chartSize2 + chartSpacingX2));
-          const cy = gridStartY2 + (row * (chartSize2 + chartSpacingY2));
+        monthsOrder.forEach((m, idx) => {
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          const cx = gridStartX + (col * (chartSize + chartSpacingX));
+          const cy = gridStartY + (row * (chartSize + chartSpacingY));
 
-          const stats = monthStatsPorClasificacion[clasificacion][m];
-          const total = stats.cumplio + stats.parcial + stats.no;
+          const monthName = m;
+          let cumplio = 0, parcial = 0, no = 0;
+          entesActivosYear.forEach(ente => {
+            const comp = compYear.find(c => c.ente_id === ente.id && c.month === monthName);
+            const status = comp ? (comp.status || '').toLowerCase() : null;
+            if (status === 'cumplio') cumplio++;
+            else if (status === 'parcial') parcial++;
+            else if (status === 'no') no++;
+          });
+          const total = cumplio + parcial + no;
 
           // Título del mes
-          pdf.setFontSize(11);
+          pdf.setFontSize(10);
           pdf.setFont('helvetica', 'bold');
           pdf.setTextColor(0, 0, 0);
-          pdf.text(m, cx, cy - (chartSize2 / 2) - 10, { align: 'center' });
+          pdf.text(m, cx, cy - (chartSize / 2) - 8, { align: 'center' });
 
           if (total > 0) {
-            // Orden: rojo (no), amarillo (parcial), verde (cumplio)
             const data = [
-              { value: stats.no, color: [220, 53, 69] },
-              { value: stats.parcial, color: [255, 215, 0] },
-              { value: stats.cumplio, color: [45, 80, 22] }
+              { value: no, color: [220, 53, 69] },
+              { value: parcial, color: [255, 215, 0] },
+              { value: cumplio, color: [45, 80, 22] }
             ].filter(d => d.value > 0);
 
-            const pieRadius2 = (chartSize2 / 2) * 0.55;
-            let currentAngle = 0; // Comenzar desde 0 grados
+            const pieRadius = (chartSize / 2) * 0.55;
+            let currentAngle = 0;
 
-            // Dibujar segmentos de pastel
             data.forEach(d => {
               const sweepAngle = (d.value / total) * 360;
-              drawPieSegment(pdf, cx, cy, pieRadius2, currentAngle, sweepAngle, d.color);
+              drawPieSegment(pdf, cx, cy, pieRadius, currentAngle, sweepAngle, d.color);
               currentAngle += sweepAngle;
             });
 
-            // Dibujar porcentajes FUERA de cada segmento
             currentAngle = 0;
             data.forEach((d, dIdx) => {
               const pct = ((d.value / total) * 100).toFixed(0);
               const sweepAngle = (d.value / total) * 360;
               const midAngle = currentAngle + (sweepAngle / 2);
-              const labelRadius = pieRadius2 + 18; // Fuera del pastel
+              const labelRadius = pieRadius + 16;
               const tx = cx + labelRadius * Math.cos(midAngle * Math.PI / 180);
               const ty = cy + labelRadius * Math.sin(midAngle * Math.PI / 180);
-
-              pdf.setFontSize(10);
+              pdf.setFontSize(9);
               pdf.setFont('helvetica', 'bold');
               pdf.setTextColor(0, 0, 0);
-              pdf.text(`${pct}%`, tx, ty + 3, { align: 'center' });
-
+              pdf.text(`${pct}%`, tx, ty + 2, { align: 'center' });
               currentAngle += sweepAngle;
             });
           } else {
             pdf.setFontSize(9);
             pdf.setTextColor(108, 117, 125);
-            pdf.text('0%', cx, cy + 3, { align: 'center' });
+            pdf.text('0%', cx, cy + 2, { align: 'center' });
           }
         });
 
@@ -731,7 +709,7 @@ export default function SiretExportPDF(){
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            disabled={!years || years.length === 0 || loading || generatingPdf}
+            disabled={!years || years.length === 0 || generatingPdf}
             style={{
               width: '100%',
               background: pdfReady ? '#28a745' : '#dc3545',
@@ -740,8 +718,8 @@ export default function SiretExportPDF(){
               padding: '12px',
               borderRadius: 8,
               fontWeight: 700,
-              cursor: !years || years.length === 0 || loading || generatingPdf ? 'not-allowed' : 'pointer',
-              opacity: !years || years.length === 0 || loading || generatingPdf ? 0.5 : 1,
+              cursor: !years || years.length === 0 || generatingPdf ? 'not-allowed' : 'pointer',
+              opacity: !years || years.length === 0 || generatingPdf ? 0.5 : 1,
               fontSize: 14
             }}
             onClick={handleGenerarPdf}
@@ -810,17 +788,12 @@ export default function SiretExportPDF(){
             <p style={{ color:'#dc3545', fontWeight:600 }}>Selecciona años desde la página anterior.</p>
           </div>
         )}
-        {years && years.length > 0 && loading && (
-          <div style={{ padding: 32 }}>
-            <p style={{ color:'#6c757d' }}>Cargando datos...</p>
-          </div>
-        )}
         {years && years.length > 0 && error && (
           <div style={{ padding: 32 }}>
             <p style={{ color:'#dc3545' }}>{error}</p>
           </div>
         )}
-        {years && years.length > 0 && !loading && !error && (
+        {years && years.length > 0 && (
           <>
             {generatingPdf && (
               <div style={{
@@ -932,10 +905,6 @@ export default function SiretExportPDF(){
                       fontWeight: 600
                     }}>
                       ⚠ Faltan parámetros necesarios (año)
-                    </p>
-                  ) : loading ? (
-                    <p style={{ color: '#6c757d', fontSize: 14 }}>
-                      Cargando datos...
                     </p>
                   ) : null}
                 </motion.div>

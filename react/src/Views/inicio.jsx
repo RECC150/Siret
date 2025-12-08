@@ -16,73 +16,156 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 export default function Inicio() {
   const [open, setOpen] = useState(null);
+  const [showInfo, setShowInfo] = useState(null);
+  const [entes, setEntes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState({});
   const navigate = useNavigate();
 
   const onSubmit = async (ev) => {};
 
   const toggle = (idx) => {
-    setOpen(open === idx ? null : idx);
+    if (open === idx) {
+      // Cerrando
+      setShowInfo(null);
+      setOpen(null);
+    } else {
+      // Abriendo - primero expandir el contenedor
+      setOpen(idx);
+      setShowInfo(null);
+      // Después de 600ms (duración de la expansión), mostrar el texto
+      setTimeout(() => {
+        setShowInfo(idx);
+      }, 600);
+    }
   };
-  // Cargar todas las imágenes de la carpeta Views/Imagenes y crear un mapa filename -> url
-  // Use import.meta.glob with eager:true for compatibility
-  const importedImages = import.meta.glob("./Imagenes/*.{png,jpg,jpeg,svg}", { eager: true });
-  const imagesMap = Object.entries(importedImages).reduce((acc, [path, module]) => {
-    const filename = path.split('/').pop();
-    acc[filename] = module.default;
-    return acc;
-  }, {});
 
-  // Data para cuadros (usa el nombre de archivo, p.ej. 'a.png')
-  const entes = [
-    {
-      id: 1,
-      title: "Congreso del Estado de Baja California Sur",
-      img: imagesMap["a.png"] || Object.values(imagesMap)[0] || "",
-      description:
-        "Equipo ficticio de ejemplo. Aquí puedes colocar una descripción más larga y enlaces a documentos.",
-      link: "/Marines%20Espaciales.html",
-    },
-    {
-      id: 2,
-      title: "Institución Ejemplo",
-      img: imagesMap["placeholder.png"] || Object.values(imagesMap)[1] || Object.values(imagesMap)[0] || "",
-      description: "Otra entidad de ejemplo. Reemplaza con datos reales o trae desde la API.",
-      link: "/institucion.html",
-    },
-  ];
-
-  const [selected, setSelected] = useState(null);
-  const [modalClosing, setModalClosing] = useState(false);
-
-  // close modal on Esc (keep up-to-date with `selected`)
+  // Cargar entes desde la API
   React.useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape" && selected) {
-        startClose();
+    const fetchEntes = async () => {
+      try {
+        const response = await fetch('http://localhost/siret/api/entes.php');
+        const data = await response.json();
+        setEntes(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error cargando entes:', error);
+        toast.error('Error al cargar los entes');
+        setLoading(false);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selected]);
+    fetchEntes();
+  }, []);
 
-  // Manage body/main classes to prevent background interaction when modal open
+  const [showNoLinkModal, setShowNoLinkModal] = useState(false);
+  const [modalClosing, setModalClosing] = useState(false);
+
+  // Modal disables scroll
   React.useEffect(() => {
-    if (selected) {
+    if (showNoLinkModal) {
       document.body.classList.add("no-scroll");
     } else {
       document.body.classList.remove("no-scroll");
     }
-  }, [selected]);
+  }, [showNoLinkModal]);
 
-  const startClose = (delay = 260) => {
-    // trigger closing animation then unmount
+  // Close modal with animation
+  const closeNoLinkModal = () => {
     setModalClosing(true);
-    // wait for animation to finish
     setTimeout(() => {
       setModalClosing(false);
-      setSelected(null);
-    }, delay);
+      setShowNoLinkModal(false);
+    }, 320);
   };
+
+  const renderIcon = (key) => {
+    const circleStyle = {
+      width: 68,
+      height: 68,
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05))',
+      border: '2px solid rgba(255,255,255,0.25)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: '0 auto'
+    };
+
+    const baseProps = { width: 32, height: 32, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+
+    switch (key) {
+      case 'calendar':
+        return (
+          <div style={circleStyle} aria-hidden="true">
+            <svg {...baseProps}>
+              <rect x="4" y="5" width="16" height="15" rx="2" ry="2" fill="none" />
+              <path d="M16 3v4M8 3v4M4 10h16" />
+              <rect x="8" y="13" width="3" height="3" fill="#fff" />
+              <rect x="13" y="13" width="3" height="3" fill="#fff" />
+            </svg>
+          </div>
+        );
+      case 'building':
+        return (
+          <div style={circleStyle} aria-hidden="true">
+            <svg {...baseProps}>
+              <rect x="5" y="4" width="14" height="16" rx="2" />
+              <path d="M9 9h2M13 9h2M9 13h2M13 13h2M9 17h2M13 17h2" />
+              <path d="M5 20h14" />
+            </svg>
+          </div>
+        );
+      case 'tags':
+        return (
+          <div style={circleStyle} aria-hidden="true">
+            <svg {...baseProps}>
+              <path d="M10 4H6a2 2 0 0 0-2 2v4l8 8 4-4-8-8z" />
+              <path d="M14 8h4a2 2 0 0 1 2 2v4l-5 5" />
+              <circle cx="8.5" cy="8.5" r="1.25" fill="#fff" />
+            </svg>
+          </div>
+        );
+      case 'compare':
+        return (
+          <div style={circleStyle} aria-hidden="true">
+            <svg {...baseProps}>
+              <path d="M5 20V10" />
+              <path d="M12 20V6" />
+              <path d="M19 20V12" />
+              <path d="M4 20h16" />
+            </svg>
+          </div>
+        );
+      default:
+        return (
+          <div style={circleStyle} aria-hidden="true">
+            <svg {...baseProps}>
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </div>
+        );
+    }
+  };
+
+  // Agrupar entes por clasificación y ordenar por id
+  const grouped = entes
+    .slice()
+    .sort((a, b) => a.id - b.id)
+    .reduce((acc, ente) => {
+      const key = ente.classification || "Sin clasificación";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(ente);
+      return acc;
+    }, {});
+  const classifications = Object.keys(grouped);
+
+  // Actualiza el tab activo si cambia la lista
+  React.useEffect(() => {
+    if (classifications.length && !classifications.includes(activeTab)) {
+      setActiveTab(classifications[0]);
+    }
+  }, [classifications]);
 
   return (
     <div className="bg-light">
@@ -91,7 +174,7 @@ export default function Inicio() {
         <div className="container-fluid">
           <a className="navbar-brand d-flex align-items-center" href="#">
               <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur
+            ASEBCS
           </a>
           <button
             className="navbar-toggler"
@@ -190,7 +273,7 @@ export default function Inicio() {
               onClick={() => toggle(0)}
             >
               <img src={SemaforoVerde} alt="Cumplimiento Total" className="semaforo-icon" />
-              <div className="semaforo-info">
+              <div className={`semaforo-info ${showInfo === 0 ? "show" : ""}`}>
                 <p>
                   Cumple en tiempo y forma con el 100% de la información
                   requerida en lo señalado por los Lineamientos para la
@@ -208,7 +291,7 @@ export default function Inicio() {
               onClick={() => toggle(1)}
             >
               <img src={SemaforoAmarillo} alt="Cumplimiento Parcial" className="semaforo-icon" />
-              <div className="semaforo-info">
+              <div className={`semaforo-info ${showInfo === 1 ? "show" : ""}`}>
                 <p>
                   No cumple en tiempo y forma con el 100% de la información
                   requerida en lo señalado por los Lineamientos para la
@@ -226,7 +309,7 @@ export default function Inicio() {
               onClick={() => toggle(2)}
             >
               <img src={SemaforoRojo} alt="Sin Información" className="semaforo-icon" />
-              <div className="semaforo-info">
+              <div className={`semaforo-info ${showInfo === 2 ? "show" : ""}`}>
                 <p>No presentó información.</p>
               </div>
             </button>
@@ -237,237 +320,177 @@ export default function Inicio() {
         <section id="cumplimientos" className="mb-5">
           <hr className="linea mb-4" />
           <h2 className="mb-4">Entes</h2>
-
         </section>
 
-        <div className="contenedor-cuadros">
-          {entes.map((ente) => (
-            <div
-              key={ente.id}
-              className={`cuadro ${selected?.id === ente.id ? "active" : ""}`}
-              onClick={() => setSelected(ente)}
-              tabIndex={0}
-              role="button"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") setSelected(ente);
-              }}
-            >
-              <img src={ente.img} alt={ente.title} />
-              <h3>{ente.title}</h3>
+        {/* Pestañas de clasificación de entes */}
+        <div className="entes-cards-container">
+          {loading ? (
+            <p>Cargando entes...</p>
+          ) : (
+            <div>
+              {classifications.map((classification, idx) => {
+                const entesInGroup = grouped[classification] || [];
+                const collapseId = `collapse-group-${idx}`;
+                const headingId = `heading-${idx}`;
+                return (
+                  <div className="card mb-4" key={classification}>
+                    <div className="card-header p-0 collapse-header" id={headingId}>
+                      <h3 className="mb-0">
+                        <button
+                          className="btn btn-link w-100 text-start px-4 py-3"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target={`#${collapseId}`}
+                          aria-expanded="false"
+                          aria-controls={collapseId}
+                          style={{fontSize: 22, fontWeight: 700, color: '#681b32', textDecoration: 'none', cursor: 'pointer'}}
+                        >
+                          {classification} <span style={{fontSize:14, color:'#6c757d', marginLeft:12}}>{entesInGroup.length} {entesInGroup.length === 1 ? 'ente' : 'entes'}</span>
+                        </button>
+                      </h3>
+                    </div>
+                    <div id={collapseId} className="collapse" aria-labelledby={headingId}>
+                      <div className="card-body">
+                        <div className="contenedor-cuadros">
+                          {entesInGroup.map((ente, entIndex) => (
+                            <div
+                              key={ente.id}
+                              className="cuadro"
+                              onClick={() => {
+                                if (ente.link) {
+                                  window.open(ente.link, '_blank', 'noopener');
+                                } else {
+                                  setShowNoLinkModal(true);
+                                }
+                              }}
+                              tabIndex={0}
+                              role="button"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") setSelected(ente);
+                              }}
+                              style={{
+                                animation: `slideUpEntes 0.5s ease-out ${0.05 * entIndex}s forwards`,
+                                opacity: 0,
+                              }}
+                            >
+                              <img src={ente.img} alt={ente.title} />
+                              <h3>{ente.title}</h3>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <style>{`
+                @keyframes slideUpEntes {
+                  from { opacity: 0; transform: translateY(20px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}</style>
             </div>
-          ))}
+          )}
         </div>
 
-        {selected && (
-          <div className={`modal-overlay ${modalClosing ? "closing" : ""}`} onClick={() => startClose()}>
-            <div className={`modal-card ${modalClosing ? "closing" : ""}`} role="dialog" aria-modal="true" aria-label={selected.title} onClick={(e)=>e.stopPropagation()}>
-              <header style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <h3>{selected.title}</h3>
-                <button onClick={()=>startClose()} aria-label="Cerrar modal">✕</button>
-              </header>
-              <div className="modal-body">
-                <img src={selected.img} alt={selected.title} style={{maxWidth:'200px',height:'auto'}} />
-                <p>{selected.description}</p>
-                {selected.link && <a href={selected.link} className="btn btn-primary">Ver más</a>}
-              </div>
+        {showNoLinkModal && (
+          <div className={`modal-overlay custom-modal${modalClosing ? " closing" : ""}`}>
+            <div className="modal-card" role="dialog" aria-modal="true" aria-label="Sin página web" style={{textAlign:'center',padding:'2.5rem', minWidth:320, borderRadius:12, boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+              <p style={{fontSize:18, color:'#2c3e50', margin:'0 0 2rem 0', lineHeight:1.5}}>Este ente no tiene página web registrada.</p>
+              <button className="btn btn-primary" style={{minWidth:120, paddingLeft:32, paddingRight:32}} onClick={closeNoLinkModal}>Aceptar</button>
             </div>
           </div>
         )}
         <section id="cumplimientos" className="mb-5">
           <hr className="linea mb-4" />
           <h2 className="mb-4">Ver cumplimientos</h2>
-          <div className="d-flex gap-3">
-            <button className="btn btn-primary" onClick={() => navigate('/cumplimientos/mes-anio')}>Por mes y año</button>
-            <button className="btn btn-primary" onClick={() => navigate('/cumplimientos/por-ente')}>Por ente</button>
-            <button className="btn btn-primary" onClick={() => navigate('/cumplimientos/por-clasificacion')}>Por clasificación de entes</button>
-          </div>
-        </section>
-        {/* Cumplimientos */}
-        <section id="cumplimientos" className="mb-5">
-          <hr className="linea mb-4" />
-          <h2 className="mb-4">Cumplimientos</h2>
+          <style>{`
+            @keyframes slideInLeftInicioCards {
+              from { opacity: 0; transform: translateX(-40px); }
+              to { opacity: 1; transform: translateX(0); }
+            }
+            .inicio-card {
+              animation: slideInLeftInicioCards 0.6s ease-out forwards;
+              background: #fff;
+              border: none;
+              border-radius: 12px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+              transition: all 0.3s ease;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+            }
+            .inicio-card:hover {
+              transform: translateY(-8px);
+              box-shadow: 0 8px 24px rgba(104, 27, 50, 0.2);
+            }
+            .inicio-card-header {
+              background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+              color: #fff;
+              padding: 24px;
+              text-align: center;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .inicio-card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
+            .inicio-card-title { font-size: 18px; font-weight: 700; color: #2c3e50; margin-bottom: 10px; }
+            .inicio-card-description { font-size: 14px; color: #2c3e50; margin-bottom: 18px; flex: 1; line-height: 1.5; }
+            .inicio-card-button {
+              background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+              color: #fff;
+              border: none;
+              padding: 11px 20px;
+              border-radius: 8px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.2s ease;
+              box-shadow: 0 3px 8px rgba(104, 27, 50, 0.3);
+            }
+            .inicio-card-button:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(104, 27, 50, 0.4); }
+            .inicio-card-button:active { transform: translateY(0); }
+          `}</style>
 
-          {/* Indicadores */}
-          <div className="cumplimiento-item mb-3">
-            <button
-              className="btn btn-magenta w-100 text-start"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#indicadoresCollapse"
-              aria-expanded="false"
-              aria-controls="indicadoresCollapse"
-            >
-              Indicadores de Cumplimiento
-            </button>
-            <div className="collapse" id="indicadoresCollapse">
-              <div className="card card-body">
-                <section id="busqueda" className="mb-5">
-                  <h2>🔍 Búsqueda de Información</h2>
-                  <form className="row g-3">
-                    <div className="col-md-4">
-                      <label htmlFor="ente" className="form-label">
-                        Ente
-                      </label>
-                      <input
-                        type="text"
-                        id="ente"
-                        className="form-control"
-                        placeholder="Ej: Municipio de La Paz"
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label htmlFor="anio" className="form-label">
-                        Año
-                      </label>
-                      <select id="anio" className="form-select">
-                        <option defaultValue>2025</option>
-                        <option>2024</option>
-                        <option>2023</option>
-                      </select>
-                    </div>
-                    <div className="col-md-4">
-                      <label htmlFor="mes" className="form-label">
-                        Mes
-                      </label>
-                      <select id="mes" className="form-select">
-                        <option defaultValue>Todos</option>
-                        <option>Enero</option>
-                        <option>Febrero</option>
-                        <option>Marzo</option>
-                      </select>
-                    </div>
-                    <div className="col-12">
-                      <button type="button" className="btn btn-primary">
-                        Buscar
-                      </button>
-                    </div>
-                  </form>
-                </section>
-                <p>Aquí irá la información de indicadores...</p>
+          <div className="row g-4">
+            {[{
+              id: 1,
+              title: 'Por mes y año',
+              description: 'Consulta cumplimientos filtrando por mes y año.',
+              path: '/cumplimientos/mes-anio',
+              iconKey: 'calendar'
+            }, {
+              id: 2,
+              title: 'Por ente',
+              description: 'Explora el detalle de cada ente y su historial de cumplimientos.',
+              path: '/cumplimientos/por-ente',
+              iconKey: 'building'
+            }, {
+              id: 3,
+              title: 'Por clasificación',
+              description: 'Revisa los cumplimientos agrupados por clasificación.',
+              path: '/cumplimientos/por-clasificacion',
+              iconKey: 'tags'
+            }, {
+              id: 4,
+              title: 'Comparativa',
+              description: 'Compara dos entes o meses/años para ver su desempeño.',
+              path: '/comparativa',
+              iconKey: 'compare'
+            }].map((card, index) => (
+              <div key={card.id} className="col-lg-6 col-xl-3" style={{ animationDelay: `${index * 0.1}s` }}>
+                <div className="inicio-card">
+                  <div className="inicio-card-header">{renderIcon(card.iconKey)}</div>
+                  <div className="inicio-card-body">
+                    <div className="inicio-card-title">{card.title}</div>
+                    <div className="inicio-card-description">{card.description}</div>
+                    <button className="inicio-card-button" onClick={() => navigate(card.path)}>
+                      Ir a {card.title}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-
-          {/* Gráficas */}
-          <div className="cumplimiento-item mb-3">
-            <button
-              className="btn btn-magenta w-100 text-start"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#graficasCollapse"
-              aria-expanded="false"
-              aria-controls="graficasCollapse"
-            >
-              Gráficas de Cumplimiento
-            </button>
-            <div className="collapse" id="graficasCollapse">
-              <div className="card card-body">
-                <section id="busqueda" className="mb-5">
-                  <h2>🔍 Búsqueda de Información</h2>
-                  <form className="row g-3">
-                    <div className="col-md-4">
-                      <label htmlFor="ente" className="form-label">
-                        Ente
-                      </label>
-                      <input
-                        type="text"
-                        id="ente"
-                        className="form-control"
-                        placeholder="Ej: Municipio de La Paz"
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label htmlFor="anio" className="form-label">
-                        Año
-                      </label>
-                      <select id="anio" className="form-select">
-                        <option defaultValue>2025</option>
-                        <option>2024</option>
-                        <option>2023</option>
-                      </select>
-                    </div>
-                    <div className="col-md-4">
-                      <label htmlFor="mes" className="form-label">
-                        Mes
-                      </label>
-                      <select id="mes" className="form-select">
-                        <option defaultValue>Todos</option>
-                        <option>Enero</option>
-                        <option>Febrero</option>
-                        <option>Marzo</option>
-                      </select>
-                    </div>
-                    <div className="col-12">
-                      <button type="button" className="btn btn-primary">
-                        Buscar
-                      </button>
-                    </div>
-                  </form>
-                </section>
-                <p>Aquí irá la información de gráficas...</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Reportes */}
-          <div className="cumplimiento-item mb-3">
-            <button
-              className="btn btn-magenta w-100 text-start"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#reportesCollapse"
-              aria-expanded="false"
-              aria-controls="reportesCollapse"
-            >
-              Reportes de Cumplimiento
-            </button>
-            <div className="collapse" id="reportesCollapse">
-              <div className="card card-body">
-                <section id="busqueda" className="mb-5">
-                  <h2>🔍 Búsqueda de Información</h2>
-                  <form className="row g-3">
-                    <div className="col-md-4">
-                      <label htmlFor="ente" className="form-label">
-                        Ente
-                      </label>
-                      <input
-                        type="text"
-                        id="ente"
-                        className="form-control"
-                        placeholder="Ej: Municipio de La Paz"
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label htmlFor="anio" className="form-label">
-                        Año
-                      </label>
-                      <select id="anio" className="form-select">
-                        <option defaultValue>2025</option>
-                        <option>2024</option>
-                        <option>2023</option>
-                      </select>
-                    </div>
-                    <div className="col-md-4">
-                      <label htmlFor="mes" className="form-label">
-                        Mes
-                      </label>
-                      <select id="mes" className="form-select">
-                        <option defaultValue>Todos</option>
-                        <option>Enero</option>
-                        <option>Febrero</option>
-                        <option>Marzo</option>
-                      </select>
-                    </div>
-                    <div className="col-12">
-                      <button type="button" className="btn btn-primary">
-                        Buscar
-                      </button>
-                    </div>
-                  </form>
-                </section>
-                <p>Aquí irá la información de reportes...</p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 

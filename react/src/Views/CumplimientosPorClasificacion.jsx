@@ -47,6 +47,15 @@ export default function CumplimientosPorClasificacion() {
   const [selectedEnte, setSelectedEnte] = useState(null);
   const [activeSection, setActiveSection] = useState('graficas'); // 'indicadores'|'graficas'
   const [enabledYears, setEnabledYears] = useState({});
+  const [closingModalIndex, setClosingModalIndex] = useState(null);
+
+  const closeModalWithAnimation = (modalId, callback) => {
+    setClosingModalIndex(modalId);
+    setTimeout(() => {
+      setClosingModalIndex(null);
+      callback();
+    }, 300);
+  };
 
   // Estados para la sección "Indicadores" (evita ReferenceError)
   const [generalYear, setGeneralYear] = useState(year);
@@ -194,7 +203,18 @@ export default function CumplimientosPorClasificacion() {
     const obj = {}; yearsAvailable.forEach(y=>obj[y]=true);
     setEnabledYears(obj);
   };
-  const closeEnteModal = () => { setSelectedEnte(null); setEnabledYears({}); setActiveSection('graficas'); };
+  const closeEnteModal = () => {
+    closeModalWithAnimation('ente', () => {
+      setSelectedEnte(null);
+      setEnabledYears({});
+      setActiveSection('graficas');
+    });
+  };
+  const closeMonthModal = () => {
+    closeModalWithAnimation('month', () => {
+      setSelectedMonth(null);
+    });
+  };
 
   const buildAreaDataForEnte = (ente) => {
     if (!ente) return [];
@@ -236,8 +256,46 @@ export default function CumplimientosPorClasificacion() {
 
   // UI
   return (
-    <div ref={containerRef} className="container py-4">
+    <div ref={containerRef} className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
       <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+        }
+
+        .modal-backdrop {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-backdrop.closing {
+          animation: fadeOut 0.2s ease-out forwards;
+        }
+
+        .modal-content {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content.closing {
+          animation: fadeOut 0.3s ease-out forwards;
+        }
+
         .form-select {
           border: 1px solid #ddd !important;
           transition: all 0.3s ease;
@@ -277,7 +335,7 @@ export default function CumplimientosPorClasificacion() {
               <div className="container-fluid">
                 <a className="navbar-brand d-flex align-items-center" href="#">
                   <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-                  Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur
+                  ASEBCS
                 </a>
                 <button
                   className="navbar-toggler"
@@ -519,11 +577,11 @@ export default function CumplimientosPorClasificacion() {
 
       {/* Modal mes */}
       {selectedMonth && (
-        <div style={{position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1050}}>
-          <div style={{width:'95%',maxWidth:1000,maxHeight:'90vh',overflow:'auto',background:'#fff',borderRadius:8,padding:20}}>
+        <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1050}}>
+          <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{width:'95%',maxWidth:1000,maxHeight:'90vh',overflow:'auto',background:'#fff',borderRadius:8,padding:20}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
               <h5 style={{margin:0}}>{selectedMonth} {year} — Detalle</h5>
-              <button className="btn btn-sm btn-secondary" onClick={()=>setSelectedMonth(null)}>Cerrar</button>
+              <button className="btn btn-sm btn-secondary" onClick={closeMonthModal}>Cerrar</button>
             </div>
             <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
               <div style={{flex:'0 0 340px',height:340,background:'#fafafa',padding:8,borderRadius:6}}>
@@ -553,8 +611,8 @@ export default function CumplimientosPorClasificacion() {
 
       {/* Modal por ENTE */}
       {selectedEnte && (
-        <div style={{position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}}>
-          <div style={{width:'95%',maxWidth:1100,maxHeight:'92vh',overflow:'auto',background:'#fff',borderRadius:8,padding:18}}>
+        <div className={`modal-backdrop${closingModalIndex === 'ente' ? ' closing' : ''}`} style={{position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000}}>
+          <div className={`modal-content${closingModalIndex === 'ente' ? ' closing' : ''}`} style={{width:'95%',maxWidth:1100,maxHeight:'92vh',overflow:'auto',background:'#fff',borderRadius:8,padding:18}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
               <h5 style={{margin:0}}>{selectedEnte.title} — Detalle</h5>
               <div>

@@ -276,7 +276,7 @@ export default function CumplimientosPorEnte() {
               <div className="container-fluid">
                 <a className="navbar-brand d-flex align-items-center" href="#">
                   <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-                  Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur
+                  ASEBCS
                 </a>
                 <button
                   className="navbar-toggler"

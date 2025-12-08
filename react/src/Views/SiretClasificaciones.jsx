@@ -12,8 +12,36 @@ export default function SiretClasificaciones() {
   const [toDelete, setToDelete] = useState(null);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [closingModalIndex, setClosingModalIndex] = useState(null);
   const newRef = useRef();
   const [toast, setToast] = useState(null);
+
+  const closeModalWithAnimation = (modalId, callback) => {
+    setClosingModalIndex(modalId);
+    setTimeout(() => {
+      setClosingModalIndex(null);
+      callback();
+    }, 300);
+  };
+
+  const closeAddModal = () => {
+    closeModalWithAnimation('add', () => {
+      setAddModalOpen(false);
+      if (newRef.current) newRef.current.value = '';
+    });
+  };
+
+  const closeEditModal = () => {
+    closeModalWithAnimation('edit', () => {
+      setEditItem(null);
+    });
+  };
+
+  const closeDeleteModal = () => {
+    closeModalWithAnimation('delete', () => {
+      setToDelete(null);
+    });
+  };
 
   const fetchClasificaciones = async () => {
     setLoading(true);
@@ -114,29 +142,53 @@ export default function SiretClasificaciones() {
   };
 
   return (
-    <div className="container py-4">
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center" href="#">
-            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            SIRET
-          </a>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item"><a className="nav-link" href="/SiretEntes">Entes</a></li>
-              <li className="nav-item"><a className="nav-link active" href="/SiretClasificaciones">Clasificaciones</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretCumplimientos">Cumplimientos</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretExportacion">Exportar</a></li>
-            </ul>
-          </div>
-        </div>
-      </nav>
+    <div className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
 
-      <header style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', textAlign: 'center', padding: '28px 0', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-        <h1 style={{ margin: 0, marginBottom: 8, fontSize: 32, fontWeight: 700 }}>SIRET</h1>
-        <p style={{ margin: 0, fontSize: 16, opacity: 0.95 }}>Catálogo de clasificaciones</p>
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+        }
+
+        .modal-backdrop {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-backdrop.closing {
+          animation: fadeOut 0.2s ease-out forwards;
+        }
+
+        .modal-content {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content.closing {
+          animation: fadeOut 0.3s ease-out forwards;
+        }
+      `}</style>
+
+      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+        <h1 style={{ margin: 0, marginBottom: 8, fontWeight: 700 }}>SIRET</h1>
+        <p className="lead" style={{ margin: 0, marginBottom: 0, opacity: 0.95 }}>Catálogo de clasificaciones</p>
       </header>
 
+      <div className="container py-4">
       <section style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
@@ -193,8 +245,8 @@ export default function SiretClasificaciones() {
       </section>
 
       {addModalOpen && (
-        <div style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
-          <div style={{ width: 520, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'add' ? ' closing' : ''}`} style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
+          <div className={`modal-content${closingModalIndex === 'add' ? ' closing' : ''}`} style={{ width: 520, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '20px 24px' }}>
               <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
@@ -210,7 +262,7 @@ export default function SiretClasificaciones() {
               </div>
             </div>
             <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background: '#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
-              <button className="btn" onClick={()=>{ setAddModalOpen(false); if (newRef.current) newRef.current.value=''; }} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
+              <button className="btn" onClick={closeAddModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
               <button className="btn" onClick={createClasificacion} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
                   <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
@@ -223,8 +275,8 @@ export default function SiretClasificaciones() {
       )}
 
       {editItem && (
-        <div style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
-          <div style={{ width: 520, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'edit' ? ' closing' : ''}`} style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
+          <div className={`modal-content${closingModalIndex === 'edit' ? ' closing' : ''}`} style={{ width: 520, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '20px 24px' }}>
               <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
@@ -240,7 +292,7 @@ export default function SiretClasificaciones() {
               </div>
             </div>
             <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background: '#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
-              <button className="btn" onClick={()=>setEditItem(null)} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
+              <button className="btn" onClick={closeEditModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
               <button className="btn" onClick={saveEdit} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
                   <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
@@ -253,8 +305,8 @@ export default function SiretClasificaciones() {
       )}
 
       {toDelete && (
-        <div style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
-          <div style={{ width: 480, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'delete' ? ' closing' : ''}`} style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
+          <div className={`modal-content${closingModalIndex === 'delete' ? ' closing' : ''}`} style={{ width: 480, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div style={{ background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)', color: '#fff', padding: '20px 24px' }}>
               <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
@@ -267,7 +319,7 @@ export default function SiretClasificaciones() {
               <p style={{ margin: 0, fontSize: 15, color: '#2c3e50' }}>¿Estás seguro de que deseas eliminar la clasificación <strong style={{ color: '#681b32' }}>{toDelete.title || toDelete.name}</strong>?</p>
             </div>
             <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background: '#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
-              <button className="btn" onClick={()=>setToDelete(null)} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
+              <button className="btn" onClick={closeDeleteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
               <button className="btn" onClick={softDelete} style={{ background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(220, 53, 69, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(220, 53, 69, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(220, 53, 69, 0.3)'; }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
                   <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
@@ -287,6 +339,8 @@ export default function SiretClasificaciones() {
           onClose={() => setToast(null)}
         />
       )}
+
+      </div>
 
     </div>
   );

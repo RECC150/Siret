@@ -22,9 +22,11 @@ try {
     exit;
 }
 
-// Expected fields: title, classification (name). Optional file: icon
+// Expected fields: title, classification (name), description, link. Optional file: icon
 $title = isset($_POST['title']) ? trim($_POST['title']) : '';
 $classificationName = isset($_POST['classification']) ? trim($_POST['classification']) : '';
+$description = isset($_POST['description']) ? trim($_POST['description']) : '';
+$link = isset($_POST['link']) ? trim($_POST['link']) : '';
 
 if ($title === '') {
     http_response_code(400);
@@ -63,8 +65,8 @@ try {
         }
     }
 
-    $stmt = $pdo->prepare("INSERT INTO entes (title, img, classification_id) VALUES (?, ?, ?)");
-    $stmt->execute([$title, $imgPath, $classification_id]);
+    $stmt = $pdo->prepare("INSERT INTO entes (title, img, classification_id, description, link) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$title, $imgPath, $classification_id, $description, $link]);
     $newId = (int)$pdo->lastInsertId();
 
     // commit
@@ -84,6 +86,8 @@ try {
         'id' => $newId,
         'title' => $title,
         'img' => $imgPath,
+        'description' => $description,
+        'link' => $link,
         'classification' => $classificationLabel,
         'classification_id' => $classification_id,
         'message' => 'Ente creado exitosamente'

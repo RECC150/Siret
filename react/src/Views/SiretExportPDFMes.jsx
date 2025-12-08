@@ -511,6 +511,7 @@ export default function SiretExportPDFMes(){
 
   return (
     <div style={containerStyle}>
+      <style>{`.navbar { display: none !important; }`}</style>
       <motion.button
         style={toggleBtnStyle}
         onClick={() => setSidebarVisible(s => !s)}

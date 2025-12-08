@@ -71,8 +71,13 @@ export default function SiretExportExcelEnte(){
   const btnStyle = { background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 16px', cursor: 'pointer', fontWeight: 700, fontSize: 14 };
   const toggleBtnStyle = { position: 'fixed', bottom: 20, left: sidebarVisible ? (sidebarWidth + 10) : 10, background: 'linear-gradient(135deg,#217346 0%, #13492f 100%)', color: '#fff', border: 'none', borderRadius: '50%', width: 50, height: 50, fontSize: 22, fontWeight: 700, cursor: 'pointer', zIndex: 1200, boxShadow: '0 4px 12px rgba(0,0,0,.3)' };
 
+  const hideNavbarStyle = `
+    .navbar { display: none !important; }
+  `;
+
   return (
     <div style={{ fontFamily: 'system-ui,-apple-system,Segoe UI,Roboto,sans-serif', background: '#f8f9fa' }}>
+      <style>{hideNavbarStyle}</style>
       <motion.button style={toggleBtnStyle} onClick={() => setSidebarVisible(s => !s)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
         {sidebarVisible ? '‹' : '›'}
       </motion.button>

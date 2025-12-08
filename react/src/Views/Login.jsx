@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosClient from "../axios-client";
 import { useStateContext } from "../Contexts/ContextProvider.jsx";
@@ -15,6 +15,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Asegura que el body no tenga padding-top (se usaba en otras vistas con navbar)
+  useEffect(() => {
+    const prevPadding = document.body.style.paddingTop;
+    document.body.style.paddingTop = "0px";
+    return () => {
+      document.body.style.paddingTop = prevPadding;
+    };
+  }, []);
 
   const onSubmit = async (ev) => {
     ev.preventDefault();
@@ -54,7 +63,7 @@ export default function Login() {
       localStorage.setItem("user_id", data.user.id);
 
       toast.success("Sesión iniciada correctamente");
-      navigate("/dashboard");
+      navigate("/Siret");
     } catch (err) {
       const response = err?.response;
       if (response?.status === 422) {
@@ -78,17 +87,40 @@ export default function Login() {
 
   return (
     <div className="app-center">
+      <style>{`
+        .form-control-login {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+          border-radius: 8px !important;
+          padding: 12px 14px !important;
+          font-size: 15px !important;
+        }
+
+        .form-control-login:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+          outline: none !important;
+        }
+
+        .form-control-login:hover {
+          border-color: #85435e !important;
+        }
+      `}</style>
       <div className="centered-card row-lg">
         <div className="left-pane">
           <img src={asebcs} alt="ASEBCS" style={{ maxHeight: 380, objectFit: "contain", display: "block" }} />
         </div>
 
         <div className="right-pane">
-          <div className="form-wrapper">
-            <h2 className="text-2xl font-bold text-slate-800 text-center mb-4">Iniciar sesión</h2>
-            <p className="text-sm mb-6 text-center">Accede con tu nombre de usuario y contraseña asignada</p>
+          <div className="form-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 text-center mb-2">Iniciar sesión</h2>
+              <p className="text-sm mb-0 text-center text-gray-600">Accede con tu nombre de usuario y contraseña asignada</p>
+            </div>
 
-            <form onSubmit={onSubmit} className="w-full space-y-4">
+            <form onSubmit={onSubmit} className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de usuario</label>
                 <input
@@ -96,9 +128,9 @@ export default function Login() {
                   type="text"
                   placeholder="Nombre de usuario"
                   onChange={() => setErrors({ ...errors, name: null })}
-                  className={`w-full px-4 py-3 border rounded-2xl transition ${errors.name ? "input-error" : ""}`}
+                  className={`w-full form-control-login ${errors.name ? "border-red-500" : ""}`}
                 />
-                {errors.name && <p className="text-error">{errors.name}</p>}
+                {errors.name && <p className="text-red-600 text-sm mt-2">{errors.name}</p>}
               </div>
 
               <div>
@@ -108,23 +140,45 @@ export default function Login() {
                   type="password"
                   placeholder="Contraseña"
                   onChange={() => setErrors({ ...errors, password: null })}
-                  className={`w-full px-4 py-3 border rounded-2xl transition ${errors.password ? "input-error" : ""}`}
+                  className={`w-full form-control-login ${errors.password ? "border-red-500" : ""}`}
                 />
-                {errors.password && <p className="text-error">{errors.password}</p>}
+                {errors.password && <p className="text-red-600 text-sm mt-2">{errors.password}</p>}
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary"
+                style={{
+                  marginTop: '12px',
+                  background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '12px 20px',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.7 : 1,
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 10px rgba(104, 27, 50, 0.45)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 {loading ? "Accediendo ..." : "Acceder"}
               </button>
             </form>
 
-            <div className="text-sm mt-4 text-center">
-              ¿Tienes problemas para iniciar sesión?{" "}
-              <button onClick={() => setIsModalOpen(true)} className="text-blue-600 font-bold underline ml-1" style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>
+            <div className="text-sm text-center" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <p style={{ margin: 0, color: '#6b7280' }}>¿Tienes problemas para iniciar sesión?</p>
+              <button onClick={() => setIsModalOpen(true)} className="text-blue-600 font-bold underline" style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontSize: '14px' }}>
                 Click aquí
               </button>
             </div>

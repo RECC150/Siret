@@ -114,14 +114,16 @@ export default function CumplimientosMesAnio() {
     setPieLoadedMonths(prev => ({ ...prev, [m]: false }));
   };
   const closeModal = () => {
-    setSelectedMonth(null);
-    try {
-      // restaurar sólo si no hay otro modal abierto
-      if (!selectedEnte) document.body.style.overflow = '';
-      else {
-        /* si existe selectedEnte, mantener oculto */
-      }
-    } catch (e) {}
+    closeModalWithAnimation('month', () => {
+      setSelectedMonth(null);
+      try {
+        // restaurar sólo si no hay otro modal abierto
+        if (!selectedEnte) document.body.style.overflow = '';
+        else {
+          /* si existe selectedEnte, mantener oculto */
+        }
+      } catch (e) {}
+    });
   };
 
   const handlePieAnimationEnd = (monthKey) => {
@@ -140,6 +142,18 @@ export default function CumplimientosMesAnio() {
 
   // Nuevo: años habilitados para area chart (map year->bool). Se inicializa cuando se selecciona entidad.
   const [enabledYears, setEnabledYears] = useState({});
+
+  // Nuevo: estado para animación de cierre de modales
+  const [closingModalIndex, setClosingModalIndex] = useState(null);
+
+  // Helper para cerrar modal con animación
+  const closeModalWithAnimation = (modalId, callback) => {
+    setClosingModalIndex(modalId);
+    setTimeout(() => {
+      setClosingModalIndex(null);
+      callback();
+    }, 300);
+  };
 
   // Nuevo: selectores para Indicadores generales (abajo de la lista)
   const [generalYear, setGeneralYear] = useState(year);
@@ -265,7 +279,7 @@ export default function CumplimientosMesAnio() {
   // Helper: map abbreviation back to full month name (used in tooltips)
   const abbrToFull = Object.fromEntries(Object.keys(monthAbbr).map(k => [ (monthAbbr[k] || k).toLowerCase(), k ]));
 
-  // Nuevo: devuelve lista de entes (title, classification, status) para un mes/año
+  // Nuevo: devuelve lista de entes (id, title, classification, status) para un mes/año
   const getEntitiesForMonth = (monthName) => {
     if (!monthName) return [];
     const y = parseInt(year, 10);
@@ -274,6 +288,7 @@ export default function CumplimientosMesAnio() {
       (ente.compliances || []).forEach(c => {
         if (c.year === y && c.month === monthName) {
           arr.push({
+            id: ente.id,
             title: ente.title,
             classification: ente.classification,
             status: c.status || 'Desconocido'
@@ -314,13 +329,15 @@ export default function CumplimientosMesAnio() {
     }
   };
   const closeEnteModal = () => {
-    setSelectedEnte(null);
-    setActiveSection('graficas');
-    setEnabledYears({});
-    try {
-      // restore body scroll only if month modal is not open
-      if (!selectedMonth) document.body.style.overflow = '';
-    } catch (e) {}
+    closeModalWithAnimation('ente', () => {
+      setSelectedEnte(null);
+      setActiveSection('graficas');
+      setEnabledYears({});
+      try {
+        // restore body scroll only if month modal is not open
+        if (!selectedMonth) document.body.style.overflow = '';
+      } catch (e) {}
+    });
   };
 
   // Construir datos para BarChart para un ente:
@@ -601,7 +618,7 @@ const computeICForEnteYear = (ente, y) => {
 };
 
   return (
-    <div ref={containerRef} className="container py-4">
+    <div ref={containerRef} className="container-fluid px-0" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -616,6 +633,17 @@ const computeICForEnteYear = (ente, y) => {
           to {
             opacity: 1;
             transform: scale(1);
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
           }
         }
 
@@ -634,8 +662,16 @@ const computeICForEnteYear = (ente, y) => {
           animation: fadeIn 0.2s ease-out;
         }
 
+        .modal-backdrop.closing {
+          animation: fadeOut 0.2s ease-out forwards;
+        }
+
         .modal-content {
           animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content.closing {
+          animation: fadeOut 0.3s ease-out forwards;
         }
 
         .form-select {
@@ -674,7 +710,7 @@ const computeICForEnteYear = (ente, y) => {
         <div className="container-fluid">
           <a className="navbar-brand d-flex align-items-center" href="#">
             <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur
+            ASEBCS
           </a>
           <button
             className="navbar-toggler"
@@ -716,11 +752,12 @@ const computeICForEnteYear = (ente, y) => {
       </nav>
 
       <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ fontWeight: 700, marginBottom: 8 }}>SIRET</h1>
+        <h1 style={{ fontWeight: 700, marginBottom: 8 }}>ASEBCS</h1>
         <p className="lead" style={{ marginBottom: 0, opacity: 0.95 }}>Cumplimientos por Mes y Año</p>
       </header>
 
-      <div style={{ width: '100%', marginTop: 20, marginBottom: 20 }}>
+      <div className="container py-5">
+      <div style={{ width: '100%', marginTop: 0, marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <button
             type="button"
@@ -844,8 +881,7 @@ const computeICForEnteYear = (ente, y) => {
               {results.map(r => (
                 <div key={r.id} className="list-group-item list-group-item-action d-flex align-items-center">
                   <div style={{ width: 96, height: 96, flex: '0 0 96px' }} className="me-3 d-flex align-items-center justify-content-center">
-                    {/* usar siempre la imagen ASEBCS importada */}
-                    <img src={ASEBCS} alt={r.title} style={{ maxWidth: '88px', maxHeight: '88px' }} />
+                    <img src={r.img || ASEBCS} alt={r.title} style={{ maxWidth: '88px', maxHeight: '88px', objectFit: 'contain' }} />
                   </div>
 
                   <div className="flex-grow-1">
@@ -875,8 +911,8 @@ const computeICForEnteYear = (ente, y) => {
           )}
           {/* Modal por ENTE con secciones (Indicadores / Gráficas) siempre renderizado si hay selectedEnte */}
           {selectedEnte && (
-            <div onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600 }}>
-                <div style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
+            <div className={`modal-backdrop${closingModalIndex === 'ente' ? ' closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600 }}>
+                <div className={`modal-content${closingModalIndex === 'ente' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
 
                   {/* HEADER CON TÍTULO Y TABS */}
                   <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, flexShrink: 0 }}>
@@ -1169,7 +1205,7 @@ const computeICForEnteYear = (ente, y) => {
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                           <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                         </svg>
                         Exportar PDF
                       </a>
@@ -1197,7 +1233,7 @@ const computeICForEnteYear = (ente, y) => {
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                           <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                         </svg>
                         Exportar Excel
                       </a>
@@ -1265,7 +1301,7 @@ const computeICForEnteYear = (ente, y) => {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                      <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                     </svg>
                     Exportar PDF
                   </a>
@@ -1293,7 +1329,7 @@ const computeICForEnteYear = (ente, y) => {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                      <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                     </svg>
                     Exportar Excel
                   </a>
@@ -1405,8 +1441,8 @@ const computeICForEnteYear = (ente, y) => {
 
           {/* Modal centrado para detalle del mes */}
           {selectedMonth && (
-            <div style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}>
-              <div style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+            <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}>
+              <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
                 {/* Header */}
                 <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
@@ -1467,7 +1503,26 @@ const computeICForEnteYear = (ente, y) => {
                         <ResponsiveContainer width={380} height={320}>
                           <PieChart>
                             <Pie
-                              data={getChartDataForMonth(selectedMonth)}
+                              data={(() => {
+                                const allEntities = getEntitiesForMonth(selectedMonth) || [];
+                                const filtered = allEntities.filter(e => {
+                                  const byName = modalNameQuery ? e.title.toLowerCase().includes(modalNameQuery.toLowerCase()) : true;
+                                  const byClass = (modalClassFilter && modalClassFilter !== 'Todos') ? e.classification === modalClassFilter : true;
+                                  return byName && byClass;
+                                });
+                                const counts = { cumplio: 0, parcial: 0, no: 0 };
+                                filtered.forEach(e => {
+                                  const status = (e.status || '').toLowerCase();
+                                  if (status === 'cumplio') counts.cumplio++;
+                                  else if (status === 'parcial') counts.parcial++;
+                                  else if (status === 'no') counts.no++;
+                                });
+                                const data = [];
+                                if (counts.cumplio) data.push({ name: 'Cumplió', value: counts.cumplio, color: '#28a745' });
+                                if (counts.parcial) data.push({ name: 'Parcial', value: counts.parcial, color: '#ffc107' });
+                                if (counts.no) data.push({ name: 'No cumplió', value: counts.no, color: '#dc3545' });
+                                return data;
+                              })()}
                               dataKey="value"
                               nameKey="name"
                               innerRadius={70}
@@ -1477,15 +1532,50 @@ const computeICForEnteYear = (ente, y) => {
                               onAnimationEnd={() => handlePieAnimationEnd(selectedMonth)}
                               label={(entry) => {
                                 if (!pieLoadedMonths[selectedMonth]) return '';
-                                const data = getChartDataForMonth(selectedMonth);
+                                const allEntities = getEntitiesForMonth(selectedMonth) || [];
+                                const filtered = allEntities.filter(e => {
+                                  const byName = modalNameQuery ? e.title.toLowerCase().includes(modalNameQuery.toLowerCase()) : true;
+                                  const byClass = (modalClassFilter && modalClassFilter !== 'Todos') ? e.classification === modalClassFilter : true;
+                                  return byName && byClass;
+                                });
+                                const counts = { cumplio: 0, parcial: 0, no: 0 };
+                                filtered.forEach(e => {
+                                  const status = (e.status || '').toLowerCase();
+                                  if (status === 'cumplio') counts.cumplio++;
+                                  else if (status === 'parcial') counts.parcial++;
+                                  else if (status === 'no') counts.no++;
+                                });
+                                const data = [];
+                                if (counts.cumplio) data.push({ name: 'Cumplió', value: counts.cumplio, color: '#28a745' });
+                                if (counts.parcial) data.push({ name: 'Parcial', value: counts.parcial, color: '#ffc107' });
+                                if (counts.no) data.push({ name: 'No cumplió', value: counts.no, color: '#dc3545' });
                                 const total = data.reduce((s, d) => s + d.value, 0) || 1;
                                 return `${((entry.value / total) * 100).toFixed(2)}%`;
                               }}
                               labelLine={pieLoadedMonths[selectedMonth]}
                             >
-                              {getChartDataForMonth(selectedMonth).map((entry, idx) => (
-                                <Cell key={`modal-cell-${idx}`} fill={entry.color} />
-                              ))}
+                              {(() => {
+                                const allEntities = getEntitiesForMonth(selectedMonth) || [];
+                                const filtered = allEntities.filter(e => {
+                                  const byName = modalNameQuery ? e.title.toLowerCase().includes(modalNameQuery.toLowerCase()) : true;
+                                  const byClass = (modalClassFilter && modalClassFilter !== 'Todos') ? e.classification === modalClassFilter : true;
+                                  return byName && byClass;
+                                });
+                                const counts = { cumplio: 0, parcial: 0, no: 0 };
+                                filtered.forEach(e => {
+                                  const status = (e.status || '').toLowerCase();
+                                  if (status === 'cumplio') counts.cumplio++;
+                                  else if (status === 'parcial') counts.parcial++;
+                                  else if (status === 'no') counts.no++;
+                                });
+                                const data = [];
+                                if (counts.cumplio) data.push({ name: 'Cumplió', value: counts.cumplio, color: '#28a745' });
+                                if (counts.parcial) data.push({ name: 'Parcial', value: counts.parcial, color: '#ffc107' });
+                                if (counts.no) data.push({ name: 'No cumplió', value: counts.no, color: '#dc3545' });
+                                return data.map((entry, idx) => (
+                                  <Cell key={`modal-cell-${idx}`} fill={entry.color} />
+                                ));
+                              })()}
                             </Pie>
                             <Tooltip formatter={(value) => [value, 'Entes']} />
                           </PieChart>
@@ -1568,7 +1658,7 @@ const computeICForEnteYear = (ente, y) => {
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                       </svg>
                       Exportar PDF
                     </a>
@@ -1596,7 +1686,7 @@ const computeICForEnteYear = (ente, y) => {
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                       </svg>
                       Exportar Excel
                     </a>
@@ -1674,7 +1764,7 @@ const computeICForEnteYear = (ente, y) => {
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                   </svg>
                   Exportar PDF
                 </a>
@@ -1701,7 +1791,7 @@ const computeICForEnteYear = (ente, y) => {
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                   </svg>
                   Exportar Excel
                 </a>
@@ -1818,6 +1908,7 @@ const computeICForEnteYear = (ente, y) => {
       )}
 
       {/* ...existing rest of component (gráficas, modales) ... */}
+      </div>
     </div>
   );
 }

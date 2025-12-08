@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 
 
+Route::post('/login', [AuthController::class, 'login']);
 Route::post('/inicio', [AuthController::class, 'inicio']);
 
 //Los usuarios que tienen un token válido pueden acceder a esta ruta

@@ -87,8 +87,68 @@ export default function SiretCumplimientos(){
   // Vista Editar: mostrar sólo entes activos toggle
   const [showOnlyActiveEdit, setShowOnlyActiveEdit] = useState(false);
 
+  // Estados para animación de cierre de modales
+  const [closingModalIndex, setClosingModalIndex] = useState(null);
+
+  // Estados para importación
+  const [importDragging, setImportDragging] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importProcessing, setImportProcessing] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importLog, setImportLog] = useState([]);
+
   // Base API (reutilizable)
   const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+
+  // Funciones helper para cerrar modales con animación
+  const closeModalWithAnimation = (modalIndex, callback) => {
+    setClosingModalIndex(modalIndex);
+    setTimeout(() => {
+      callback();
+      setClosingModalIndex(null);
+    }, 300); // Esperar a que termine la animación
+  };
+
+  const closeDeleteYearModal = () => {
+    closeModalWithAnimation('deleteYear', () => {
+      setShowDeleteYearModal(false);
+      setYearToDelete(null);
+    });
+  };
+
+  const closeEntesModal = () => {
+    closeModalWithAnimation('entes', () => {
+      setShowEntesModal(false);
+      setEntesModalYear(null);
+      setEntesModalSearchName('');
+      setEntesModalClasif('Todos');
+      setEntesModalFilter('todos');
+    });
+  };
+
+  const closeMonthModal = () => {
+    closeModalWithAnimation('month', () => {
+      setShowMonthModal(false);
+      setMonthModalYear(null);
+      setMonthModalMonth('');
+      setMonthModalSearchName('');
+      setMonthModalClasif('Todos');
+      setMonthModalTemp({});
+    });
+  };
+
+  const closeDeleteMonthModal = () => {
+    closeModalWithAnimation('deleteMonth', () => {
+      setShowDeleteMonthModal(false);
+    });
+  };
+
+  const closeEditingEnteModal = () => {
+    closeModalWithAnimation('editingEnte', () => {
+      setEditingEnte(null);
+      setTempCompliances({});
+    });
+  };
 
   const latestYear = useMemo(()=>{
     if (!displayYears.length) return null;
@@ -112,8 +172,7 @@ export default function SiretCumplimientos(){
       setToast({ message: 'Error eliminando año', type: 'error' });
     } finally {
       setDeletingYear(null);
-      setShowDeleteYearModal(false);
-      setYearToDelete(null);
+      closeDeleteYearModal();
     }
   };
 
@@ -405,8 +464,264 @@ export default function SiretCumplimientos(){
     return true;
   });
 
+  // ================ FUNCIONES DE IMPORTACIÓN ================
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImportDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImportDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImportDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.endsWith('.sql') || file.type === 'text/plain') {
+        setImportFile(file);
+      } else {
+        setToast({ message: 'Por favor selecciona un archivo .sql', type: 'error' });
+      }
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.endsWith('.sql') || file.type === 'text/plain') {
+        setImportFile(file);
+      } else {
+        setToast({ message: 'Por favor selecciona un archivo .sql', type: 'error' });
+      }
+    }
+  };
+
+  const parseSQL = (sqlContent) => {
+    const lines = sqlContent.split('\n');
+    const compliancesData = [];
+    const entesActivosData = [];
+
+    let currentInsert = null;
+    let buffer = '';
+
+    for (let line of lines) {
+      line = line.trim();
+
+      // Ignorar comentarios y líneas vacías
+      if (!line || line.startsWith('--') || line.startsWith('/*') || line === 'USE siret;') continue;
+
+      buffer += ' ' + line;
+
+      // Detectar inicio de INSERT
+      if (line.toUpperCase().includes('INSERT') && line.toUpperCase().includes('INTO')) {
+        if (line.toUpperCase().includes('COMPLIANCES')) {
+          currentInsert = 'compliances';
+        } else if (line.toUpperCase().includes('ENTES_ACTIVOS')) {
+          currentInsert = 'entes_activos';
+        }
+      }
+
+      // Detectar fin de INSERT (punto y coma)
+      if (line.endsWith(';') && currentInsert) {
+        const valuesMatch = buffer.match(/VALUES\s+([\s\S]+);/i);
+        if (valuesMatch) {
+          const valuesStr = valuesMatch[1];
+          // Parsear cada tupla (row)
+          const tuples = valuesStr.match(/\([^)]+\)/g) || [];
+
+          tuples.forEach(tuple => {
+            const values = tuple.slice(1, -1).split(',').map(v => {
+              v = v.trim();
+              if (v === 'NULL') return null;
+              if (v.startsWith("'") && v.endsWith("'")) return v.slice(1, -1).replace(/''/g, "'");
+              return v;
+            });
+
+            if (currentInsert === 'compliances' && values.length >= 4) {
+              compliancesData.push({
+                ente_id: parseInt(values[0]),
+                year: parseInt(values[1]),
+                month: values[2],
+                status: values[3],
+                note: values[4] || null,
+                created_at: values[5] || null
+              });
+            } else if (currentInsert === 'entes_activos' && values.length >= 2) {
+              entesActivosData.push({
+                ente_id: parseInt(values[0]),
+                year: parseInt(values[1]),
+                created_at: values[2] || null
+              });
+            }
+          });
+        }
+
+        currentInsert = null;
+        buffer = '';
+      }
+    }
+
+    return { compliances: compliancesData, entesActivos: entesActivosData };
+  };
+
+  const handleImportSQL = async () => {
+    if (!importFile) {
+      setToast({ message: 'Selecciona un archivo SQL primero', type: 'error' });
+      return;
+    }
+
+    setImportProcessing(true);
+    setImportProgress(0);
+    setImportLog([]);
+
+    try {
+      // Leer archivo
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const sqlContent = e.target.result;
+          setImportLog(prev => [...prev, '📄 Leyendo archivo SQL...']);
+          setImportProgress(10);
+
+          // Parsear SQL
+          const { compliances: newCompliances, entesActivos: newEntesActivos } = parseSQL(sqlContent);
+          setImportLog(prev => [...prev, `✅ Encontrados ${newCompliances.length} cumplimientos y ${newEntesActivos.length} entes activos`]);
+          setImportProgress(20);
+
+          if (newCompliances.length === 0 && newEntesActivos.length === 0) {
+            setToast({ message: 'No se encontraron datos válidos en el archivo', type: 'error' });
+            setImportProcessing(false);
+            return;
+          }
+
+          // Obtener año del import
+          const importYear = newCompliances.length > 0 ? newCompliances[0].year : newEntesActivos[0].year;
+          setImportLog(prev => [...prev, `📅 Importando año: ${importYear}`]);
+
+          // Verificar si el año existe
+          const yearExists = displayYears.includes(String(importYear));
+          if (yearExists) {
+            setImportLog(prev => [...prev, `⚠️ El año ${importYear} ya existe. Se sobreescribirán los datos.`]);
+          } else {
+            setImportLog(prev => [...prev, `➕ Creando nuevo año: ${importYear}`]);
+          }
+
+          setImportProgress(30);
+
+          // Importar entes activos
+          if (newEntesActivos.length > 0) {
+            setImportLog(prev => [...prev, `🔄 Importando ${newEntesActivos.length} entes activos...`]);
+
+            for (let i = 0; i < newEntesActivos.length; i++) {
+              const ea = newEntesActivos[i];
+              try {
+                await fetch(`${apiBase}/entes_activos.php`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ente_id: ea.ente_id, year: ea.year })
+                });
+              } catch (err) {
+                console.error('Error importing ente activo:', err);
+              }
+              setImportProgress(30 + ((i + 1) / newEntesActivos.length) * 20);
+            }
+            setImportLog(prev => [...prev, `✅ Entes activos importados`]);
+          }
+
+          setImportProgress(50);
+
+          // Importar cumplimientos
+          if (newCompliances.length > 0) {
+            setImportLog(prev => [...prev, `🔄 Importando ${newCompliances.length} cumplimientos...`]);
+
+            // Preparar datos en formato de updates para compliance_update.php
+            const updates = newCompliances.map(comp => ({
+              ente_id: comp.ente_id,
+              year: comp.year,
+              month: comp.month,
+              status: comp.status
+            }));
+
+            try {
+              const res = await fetch(`${apiBase}/compliance_update.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates })
+              });
+              const json = await res.json();
+
+              if (json && json.success) {
+                setImportLog(prev => [...prev, `✅ Cumplimientos importados correctamente`]);
+              } else {
+                setImportLog(prev => [...prev, `⚠️ Algunos cumplimientos podrían no haberse importado`]);
+              }
+            } catch (err) {
+              console.error('Error importing compliances:', err);
+              setImportLog(prev => [...prev, `❌ Error importando cumplimientos: ${err.message}`]);
+            }
+
+            setImportProgress(90);
+          }
+
+          setImportProgress(95);
+
+          // Recargar datos
+          setImportLog(prev => [...prev, `🔄 Recargando datos...`]);
+          const [cRes, eRes] = await Promise.all([
+            fetch(apiBase + '/compliances.php'),
+            fetch(apiBase + '/entes.php')
+          ]);
+          const [cJson, eJson] = await Promise.all([cRes.json(), eRes.json()]);
+          setCompliances(Array.isArray(cJson) ? cJson : []);
+          setEntes(Array.isArray(eJson) ? eJson : []);
+
+          const years = (Array.isArray(cJson) ? cJson.map(r => String(r.year)).filter(Boolean) : []);
+          const uniqueYears = Array.from(new Set(years)).sort((a, b) => Number(b) - Number(a));
+          setDisplayYears(uniqueYears);
+
+          setImportProgress(100);
+          setImportLog(prev => [...prev, `✅ Importación completada exitosamente`]);
+          setToast({ message: `Año ${importYear} importado correctamente`, type: 'success' });
+
+          // Limpiar después de 3 segundos
+          setTimeout(() => {
+            setImportFile(null);
+            setImportLog([]);
+            setImportProgress(0);
+            setImportProcessing(false);
+          }, 3000);
+
+        } catch (err) {
+          console.error('Import error:', err);
+          setImportLog(prev => [...prev, `❌ Error: ${err.message}`]);
+          setToast({ message: 'Error al importar el archivo', type: 'error' });
+          setImportProcessing(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setToast({ message: 'Error al leer el archivo', type: 'error' });
+        setImportProcessing(false);
+      };
+
+      reader.readAsText(importFile);
+    } catch (err) {
+      console.error('Import error:', err);
+      setToast({ message: 'Error al procesar el archivo', type: 'error' });
+      setImportProcessing(false);
+    }
+  };
+
   return (
-    <div className="container py-4">
+    <div className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -421,6 +736,17 @@ export default function SiretCumplimientos(){
           to {
             opacity: 1;
             transform: scale(1);
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
           }
         }
 
@@ -439,36 +765,61 @@ export default function SiretCumplimientos(){
           animation: fadeIn 0.2s ease-out;
         }
 
+        .modal-backdrop.closing {
+          animation: fadeOut 0.2s ease-out forwards;
+        }
+
         .modal-content {
           animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content.closing {
+          animation: fadeOut 0.3s ease-out forwards;
         }
 
         .month-chip {
           animation: slideDown 0.3s ease-out;
         }
-      `}</style>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center" href="#">
-            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            SIRET
-          </a>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item"><a className="nav-link" href="/SiretEntes">Entes</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretClasificaciones">Clasificaciones</a></li>
-              <li className="nav-item"><a className="nav-link active" href="/SiretCumplimientos">Cumplimientos</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretExportacion">Exportar</a></li>
-            </ul>
-          </div>
-        </div>
-      </nav>
 
-      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ fontWeight: 700, marginBottom: 8 }}>SIRET</h1>
-        <p className="lead" style={{ marginBottom: 0, opacity: 0.95 }}>Sistema de Registro de Cumplimientos</p>
+        .form-select {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+        }
+
+        .form-select:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+        }
+
+        .form-select:hover {
+          border-color: #85435e !important;
+        }
+
+        .form-control {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+        }
+
+        .form-control:hover {
+          border-color: #85435e !important;
+        }
+      `}</style>
+
+      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+        <h1 style={{ margin: 0, marginBottom: 8, fontWeight: 700 }}>SIRET</h1>
+        <p className="lead" style={{ margin: 0, marginBottom: 0, opacity: 0.95 }}>Sistema de Registro de Cumplimientos</p>
       </header>
 
+      <div className="container py-4">
         <div style={{ width: '100%', marginTop: 20, marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <button
@@ -760,13 +1111,13 @@ export default function SiretCumplimientos(){
                                 return (
                                   <span style={{ display: 'flex', gap: 6, marginLeft: 12, fontSize: 12 }}>
                                     <span style={{ background: '#28a745', color: '#fff', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
-                                      Verde: {stats.greenPercent}%
+                                      Cumplió: {stats.greenPercent}%
                                     </span>
                                     <span style={{ background: '#ffc107', color: '#000', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
-                                      Amarillo: {stats.yellowPercent}%
+                                      No cumplió: {stats.yellowPercent}%
                                     </span>
                                     <span style={{ background: '#dc3545', color: '#fff', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
-                                      Rojo: {stats.redPercent}%
+                                      No presentó: {stats.redPercent}%
                                     </span>
                                   </span>
                                 );
@@ -1095,8 +1446,8 @@ export default function SiretCumplimientos(){
       )}
 
       {showDeleteYearModal && yearToDelete && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" style={{ width: '90%', maxWidth: 520, background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'deleteYear' ? ' closing' : ''}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={`modal-content${closingModalIndex === 'deleteYear' ? ' closing' : ''}`} style={{ width: '90%', maxWidth: 520, background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)', color: '#fff', padding: '22px 26px', position: 'relative' }}>
               <h5 style={{ margin: 0, fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
@@ -1121,7 +1472,7 @@ export default function SiretCumplimientos(){
             </div>
             <div style={{ padding: '18px 24px', background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button
-                onClick={() => { if (!deletingYear) { setShowDeleteYearModal(false); setYearToDelete(null); } }}
+                onClick={() => { if (!deletingYear) closeDeleteYearModal(); }}
                 style={{
                   background: '#fff', border: '2px solid #dee2e6', color: '#495057', padding: '10px 22px', fontWeight: 600, borderRadius: 8,
                   cursor: 'pointer', transition: 'all 0.2s ease'
@@ -1153,8 +1504,8 @@ export default function SiretCumplimientos(){
 
       {/* Modal Ver Entes: administración de entes activos y captura rápida por mes */}
       {showEntesModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'entes' ? ' closing' : ''}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={`modal-content${closingModalIndex === 'entes' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 18, paddingLeft: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flex: 1 }}>
@@ -1291,7 +1642,7 @@ export default function SiretCumplimientos(){
                 </div>
               <button
                 className="btn"
-                onClick={()=>{ setShowEntesModal(false); }}
+                onClick={()=>closeEntesModal()}
                 style={{
                   background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                   color: '#fff',
@@ -1314,8 +1665,8 @@ export default function SiretCumplimientos(){
 
       {/* Modal Captura por Mes: guardar cumplimientos por mes */}
       {showMonthModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -1355,7 +1706,7 @@ export default function SiretCumplimientos(){
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="Todos">Todos</option>
+                    <option value="Todos">Todas las clasificaciones</option>
                     {clasificaciones.map(c => (
                       <option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>
                     ))}
@@ -1398,9 +1749,9 @@ export default function SiretCumplimientos(){
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff' }}>
                     <th style={{ padding: '14px 16px', borderBottom: 'none', fontWeight: 600 }}>Ente</th>
-                    <th style={{ padding: '14px 16px', borderBottom: 'none', textAlign: 'center', fontWeight: 600, width: 120 }}>Verde</th>
-                    <th style={{ padding: '14px 16px', borderBottom: 'none', textAlign: 'center', fontWeight: 600, width: 120 }}>Amarillo</th>
-                    <th style={{ padding: '14px 16px', borderBottom: 'none', textAlign: 'center', fontWeight: 600, width: 120 }}>Rojo</th>
+                    <th style={{ padding: '14px 16px', borderBottom: 'none', textAlign: 'center', fontWeight: 600, width: 120 }}>Cumplió</th>
+                    <th style={{ padding: '14px 16px', borderBottom: 'none', textAlign: 'center', fontWeight: 600, width: 120 }}>No cumplió</th>
+                    <th style={{ padding: '14px 16px', borderBottom: 'none', textAlign: 'center', fontWeight: 600, width: 120 }}>No presentó</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1485,13 +1836,13 @@ export default function SiretCumplimientos(){
                         IC: {stats.ic}%
                       </span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: '#28a745', padding: '6px 10px', borderRadius: 8 }}>
-                        Verde: {stats.greenPercent}%
+                        Cumplió: {stats.greenPercent}%
                       </span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#000', background: '#ffc107', padding: '6px 10px', borderRadius: 8 }}>
-                        Amarillo: {stats.yellowPercent}%
+                        No cumplió: {stats.yellowPercent}%
                       </span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: '#dc3545', padding: '6px 10px', borderRadius: 8 }}>
-                        Rojo: {stats.redPercent}%
+                        No presentó: {stats.redPercent}%
                       </span>
                     </>
                   );
@@ -1500,7 +1851,7 @@ export default function SiretCumplimientos(){
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   className="btn"
-                  onClick={()=>{ setShowMonthModal(false); setMonthModalTemp({}); setMonthModalReadOnly(false); }}
+                  onClick={()=>{ closeMonthModal(); setMonthModalReadOnly(false); }}
                   style={{
                     background: '#fff',
                     color: '#6c757d',
@@ -1607,8 +1958,8 @@ export default function SiretCumplimientos(){
 
       {/* Modal de confirmación para eliminar mes */}
       {showDeleteMonthModal && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" style={{ width: '90%', maxWidth: 520, background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'deleteMonth' ? ' closing' : ''}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={`modal-content${closingModalIndex === 'deleteMonth' ? ' closing' : ''}`} style={{ width: '90%', maxWidth: 520, background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)', color: '#fff', padding: '22px 26px', position: 'relative' }}>
               <h5 style={{ margin: 0, fontWeight: 700, fontSize: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
@@ -1633,7 +1984,7 @@ export default function SiretCumplimientos(){
             </div>
             <div style={{ padding: '18px 24px', background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button
-                onClick={() => { if (!deletingMonth) setShowDeleteMonthModal(false); }}
+                onClick={() => { if (!deletingMonth) closeDeleteMonthModal(); }}
                 style={{
                   background: '#fff', border: '2px solid #dee2e6', color: '#495057', padding: '10px 22px', fontWeight: 600, borderRadius: 8,
                   cursor: 'pointer', transition: 'all 0.2s ease'
@@ -1665,8 +2016,8 @@ export default function SiretCumplimientos(){
 
       {/* Modal de edición de cumplimientos */}
       {editingEnte && (
-        <div className="modal-backdrop" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div className="modal-content" style={{ width: '90%', maxWidth: 900, background: '#fff', borderRadius: 12, maxHeight: '90vh', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'editingEnte' ? ' closing' : ''}`} style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+          <div className={`modal-content${closingModalIndex === 'editingEnte' ? ' closing' : ''}`} style={{ width: '90%', maxWidth: 900, background: '#fff', borderRadius: 12, maxHeight: '90vh', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Encabezado sticky */}
             <div style={{ position: 'sticky', top: 0, background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', zIndex: 10, padding: 24, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
               <div>
@@ -1817,14 +2168,14 @@ export default function SiretCumplimientos(){
                 return (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ background: '#e9ecef', color: '#200b07', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>IC: {stats.ic}%</span>
-                    <span style={{ background: '#28a745', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>Verde: {stats.greenPercent}%</span>
-                    <span style={{ background: '#ffc107', color: '#000', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>Amarillo: {stats.yellowPercent}%</span>
-                    <span style={{ background: '#dc3545', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>Rojo: {stats.redPercent}%</span>
+                    <span style={{ background: '#28a745', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>Cumplió: {stats.greenPercent}%</span>
+                    <span style={{ background: '#ffc107', color: '#000', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>No cumplió: {stats.yellowPercent}%</span>
+                    <span style={{ background: '#dc3545', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>No presentó: {stats.redPercent}%</span>
                   </div>
                 );
               })()}
               <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn" onClick={()=>{ setEditingEnte(null); setTempCompliances({}); }} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>
+                <button className="btn" onClick={closeEditingEnteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>
                   Cancelar
                 </button>
                 <button className="btn" onClick={async ()=>{
@@ -1840,7 +2191,7 @@ export default function SiretCumplimientos(){
 
                   if (updates.length === 0) {
                     setToast({ message: 'No hay cambios para guardar', type: 'warning' });
-                    setEditingEnte(null);
+                    closeEditingEnteModal();
                     return;
                   }
 
@@ -1859,7 +2210,7 @@ export default function SiretCumplimientos(){
                     const cJson = await cRes.json();
                     setCompliances(Array.isArray(cJson) ? cJson : []);
                     setTempCompliances({});
-                    setEditingEnte(null);
+                    closeEditingEnteModal();
                   } else {
                     setToast({ message: 'Error al guardar: ' + (result.message || 'Error desconocido'), type: 'error' });
                   }
@@ -1889,12 +2240,166 @@ export default function SiretCumplimientos(){
 
       {viewMode === 'importar' && (
         <section style={{ marginTop: 16 }}>
-          <div className="card card-body mb-3">
-            <h5>Importar Cumplimientos</h5>
-            <p>Formulario para importar cumplimientos desde archivo (próximamente)</p>
+          <div className="card card-body mb-3" style={{ border: 'none', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <h5 style={{ fontWeight: 700, color: '#681b32', marginBottom: 16 }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+              </svg>
+              Importar Cumplimientos
+            </h5>
+            <p style={{ color: '#6c757d', marginBottom: 24 }}>
+              Arrastra y suelta un archivo SQL exportado desde SIRET, o haz clic para seleccionar.
+              Si el año ya existe, se sobreescribirán los datos.
+            </p>
+
+            {/* Zona de Drag & Drop */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => !importProcessing && document.getElementById('file-input').click()}
+              style={{
+                border: `3px dashed ${importDragging ? '#681b32' : '#dee2e6'}`,
+                borderRadius: 12,
+                padding: '60px 40px',
+                textAlign: 'center',
+                background: importDragging ? 'rgba(104, 27, 50, 0.05)' : '#f8f9fa',
+                cursor: importProcessing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease',
+                marginBottom: 20
+              }}
+            >
+              <input
+                id="file-input"
+                type="file"
+                accept=".sql,.txt"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+                disabled={importProcessing}
+              />
+
+              {!importFile ? (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill={importDragging ? '#681b32' : '#6c757d'} viewBox="0 0 16 16" style={{ marginBottom: 16, opacity: 0.6 }}>
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                  </svg>
+                  <h6 style={{ fontWeight: 600, color: '#681b32', marginBottom: 8 }}>
+                    {importDragging ? 'Suelta el archivo aquí' : 'Arrastra un archivo SQL o haz clic para seleccionar'}
+                  </h6>
+                  <p style={{ color: '#6c757d', fontSize: 14, margin: 0 }}>
+                    Archivos soportados: .sql, .txt
+                  </p>
+                </>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#681b32" viewBox="0 0 16 16">
+                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                  </svg>
+                  <div style={{ textAlign: 'left' }}>
+                    <h6 style={{ margin: 0, fontWeight: 600, color: '#681b32' }}>{importFile.name}</h6>
+                    <p style={{ margin: 0, fontSize: 14, color: '#6c757d' }}>
+                      {(importFile.size / 1024).toFixed(2)} KB
+                    </p>
+                  </div>
+                  {!importProcessing && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setImportFile(null); }}
+                      style={{
+                        background: '#dc3545',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: 32,
+                        height: 32,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Botón de importar */}
+            {importFile && (
+              <button
+                onClick={handleImportSQL}
+                disabled={importProcessing}
+                style={{
+                  background: importProcessing ? '#6c757d' : 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '14px 28px',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: 15,
+                  cursor: importProcessing ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 6px rgba(104, 27, 50, 0.3)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  margin: '0 auto'
+                }}
+                onMouseEnter={(e) => !importProcessing && (e.currentTarget.style.transform = 'translateY(-2px)')}
+                onMouseLeave={(e) => !importProcessing && (e.currentTarget.style.transform = 'translateY(0)')}
+              >
+                {importProcessing ? (
+                  <>
+                    <div style={{ width: 16, height: 16, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    </svg>
+                    Importar Archivo SQL
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Barra de progreso */}
+            {importProcessing && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#681b32' }}>Progreso</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#681b32' }}>{importProgress}%</span>
+                </div>
+                <div style={{ width: '100%', height: 8, background: '#e9ecef', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${importProgress}%`,
+                    height: '100%',
+                    background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {/* Log de importación */}
+            {importLog.length > 0 && (
+              <div style={{ marginTop: 24, background: '#f8f9fa', borderRadius: 8, padding: 16, maxHeight: 300, overflowY: 'auto' }}>
+                <h6 style={{ fontWeight: 600, color: '#681b32', marginBottom: 12 }}>Log de Importación</h6>
+                {importLog.map((log, idx) => (
+                  <div key={idx} style={{ fontSize: 13, color: '#495057', marginBottom: 6, fontFamily: 'monospace' }}>
+                    {log}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
+      </div>
     </div>
   );
 }

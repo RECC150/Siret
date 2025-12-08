@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Label } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Label, PieChart, Pie, Cell } from 'recharts';
 import ASEBCS from '../assets/asebcs.jpg';
+import Comparativa from './SiretComparativa';
 
 // Componentes de gráfico consistentes con CumplimientosMesAnio
 const monthAbbr = {
@@ -121,7 +122,37 @@ export default function SiretExportacion(){
   const [monthModalSearchName, setMonthModalSearchName] = useState('');
   const [monthModalClasif, setMonthModalClasif] = useState('');
 
+  // Estado para animación de cierre de modales
+  const [closingModalIndex, setClosingModalIndex] = useState(null);
+
   const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+
+  // Funciones helper para cerrar modales con animación
+  const closeModalWithAnimation = (modalIndex, callback) => {
+    setClosingModalIndex(modalIndex);
+    setTimeout(() => {
+      callback();
+      setClosingModalIndex(null);
+    }, 300);
+  };
+
+  const closeEntesModal = () => {
+    closeModalWithAnimation('entes', () => {
+      setShowEntesModal(false);
+      setEntesModalYear(null);
+    });
+  };
+
+  const closeMonthModal = () => {
+    closeModalWithAnimation('month', () => {
+      setShowMonthModal(false);
+      setMonthModalYear(null);
+      setMonthModalMonth(null);
+      setMonthModalSearchName('');
+      setMonthModalClasif('');
+      try { document.body.style.overflow = ''; } catch (e) {}
+    });
+  };
 
   useEffect(()=>{
     const load = async () => {
@@ -154,8 +185,9 @@ export default function SiretExportacion(){
         try {
           const res = await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(year)}`);
           const json = await res.json();
-          const setIds = new Set((json || []).map(r => Number(r.ente_id)));
-          setEntesActivosByYear(prev => ({ ...prev, [key]: setIds }));
+          // Guardar los objetos completos, no solo los IDs
+          const arr = Array.isArray(json) ? json : [];
+          setEntesActivosByYear(prev => ({ ...prev, [key]: arr }));
         } catch(e){ console.error(e); }
       };
       load();
@@ -280,8 +312,12 @@ export default function SiretExportacion(){
     try { document.body.style.overflow = 'hidden'; } catch (e) {}
   };
   const closeEnteModal = () => {
-    setSelectedEnte(null);
-    try { document.body.style.overflow = ''; } catch (e) {}
+    closeModalWithAnimation('selectedEnte', () => {
+      setSelectedEnte(null);
+      setEnabledYears({});
+      setActiveSection('indicadores');
+      try { document.body.style.overflow = ''; } catch (e) {}
+    });
   };
 
   const calculateYearStats = (year) => {
@@ -333,7 +369,8 @@ export default function SiretExportacion(){
 
   // Versión filtrada por entes visibles en el modal (búsqueda + clasificación)
   const calculateMonthStatsFiltered = (year, month, searchName, clasif) => {
-    const currentActivesSet = entesActivosByYear[String(year)] || new Set();
+    const activesArr = entesActivosByYear[String(year)] || [];
+    const currentActivesSet = new Set(activesArr.map(a => Number(a.ente_id)));
     let filteredEntes = (entes || []).filter(e => currentActivesSet.has(Number(e.id)));
     if (searchName && searchName.trim()) {
       const q = searchName.trim().toLowerCase();
@@ -357,7 +394,8 @@ export default function SiretExportacion(){
   // Lista de IDs filtrados actualmente en el modal del mes
   const filteredMonthEnteIds = useMemo(() => {
     if(!monthModalYear || !monthModalMonth) return [];
-    const currentActivesSet = entesActivosByYear[String(monthModalYear)] || new Set();
+    const activesArr = entesActivosByYear[String(monthModalYear)] || [];
+    const currentActivesSet = new Set(activesArr.map(a => Number(a.ente_id)));
     let list = (entes || []).filter(e => currentActivesSet.has(Number(e.id)));
     if (monthModalSearchName && monthModalSearchName.trim()) {
       const q = monthModalSearchName.trim().toLowerCase();
@@ -378,11 +416,6 @@ export default function SiretExportacion(){
     try { document.body.style.overflow = 'hidden'; } catch (e) {}
   };
 
-  const closeMonthModal = () => {
-    setShowMonthModal(false);
-    try { document.body.style.overflow = ''; } catch (e) {}
-  };
-
   const handleExportPDFYear = (year) => {
     alert(`Exportar PDF del año ${year} (próximamente)`);
   };
@@ -390,30 +423,177 @@ export default function SiretExportacion(){
     alert(`Exportar Excel del año ${year} (próximamente)`);
   };
 
-  return (
-    <div className="container py-4">
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center" href="#">
-            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            SIRET
-          </a>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item"><a className="nav-link" href="/SiretEntes">Entes</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretClasificaciones">Clasificaciones</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretCumplimientos">Cumplimientos</a></li>
-              <li className="nav-item"><a className="nav-link active" href="/SiretExportacion">Exportar</a></li>
-            </ul>
-          </div>
-        </div>
-      </nav>
+  const handleExportSQLYear = (year) => {
+    if (!year || !compliances) return;
 
-      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ fontWeight: 700, marginBottom: 8 }}>SIRET</h1>
-        <p className="lead" style={{ marginBottom: 0, opacity: 0.95 }}>Sistema de Registro de Cumplimientos</p>
+    // Filtrar cumplimientos del año
+    const yearCompliances = (compliances || []).filter(c => String(c.year) === String(year));
+
+    // Filtrar entes activos del año
+    const yearEntesActivos = (entesActivosByYear[String(year)] || []);
+
+    // Construir SQL
+    let sql = `-- ============================================\n`;
+    sql += `-- SQL Export para Año ${year}\n`;
+    sql += `-- Generado: ${new Date().toLocaleString()}\n`;
+    sql += `-- ============================================\n`;
+    sql += `-- Este archivo contiene:\n`;
+    sql += `-- 1. Cumplimientos (${yearCompliances.length} registros)\n`;
+    sql += `-- 2. Entes Activos (${yearEntesActivos.length} registros)\n`;
+    sql += `-- ============================================\n\n`;
+
+    sql += `USE siret;\n\n`;
+
+    // OPCIONAL: Descomentar para eliminar datos existentes del año
+    sql += `-- ADVERTENCIA: Descomentar las siguientes líneas eliminará los datos existentes del año ${year}\n`;
+    sql += `-- DELETE FROM compliances WHERE year = ${year};\n`;
+    sql += `-- DELETE FROM entes_activos WHERE year = ${year};\n\n`;
+
+    // INSERT para entes_activos (primero, ya que compliances depende de que los entes estén activos)
+    sql += `-- ============================================\n`;
+    sql += `-- Entes Activos del año ${year}\n`;
+    sql += `-- ============================================\n`;
+    if (yearEntesActivos.length > 0) {
+      sql += `-- Insertar entes activos (ignorar duplicados)\n`;
+      sql += `INSERT IGNORE INTO entes_activos (ente_id, year, created_at) VALUES\n`;
+      sql += yearEntesActivos.map((ea, idx) => {
+        const createdAt = ea.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
+        return `(${ea.ente_id}, ${year}, '${createdAt}')`;
+      }).join(',\n');
+      sql += `;\n\n`;
+    } else {
+      sql += `-- No hay entes activos para este año\n\n`;
+    }
+
+    // INSERT para compliances
+    sql += `-- ============================================\n`;
+    sql += `-- Cumplimientos del año ${year}\n`;
+    sql += `-- ============================================\n`;
+    if (yearCompliances.length > 0) {
+      sql += `-- Insertar cumplimientos\n`;
+      sql += `INSERT INTO compliances (ente_id, year, month, status, note, created_at) VALUES\n`;
+      sql += yearCompliances.map((c, idx) => {
+        const note = c.note ? `'${(c.note || '').replace(/'/g, "''")}'` : 'NULL';
+        const createdAt = c.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
+        return `(${c.ente_id}, ${c.year}, '${c.month}', '${c.status}', ${note}, '${createdAt}')`;
+      }).join(',\n');
+      sql += `;\n\n`;
+    } else {
+      sql += `-- No hay cumplimientos para este año\n\n`;
+    }
+
+    sql += `-- ============================================\n`;
+    sql += `-- Fin del export\n`;
+    sql += `-- ============================================\n`;
+
+    // Descargar archivo
+    const blob = new Blob([sql], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `siret_sql_${year}.sql`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .modal-backdrop {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-backdrop.closing {
+          animation: fadeOut 0.2s ease-out forwards;
+        }
+
+        .modal-content {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content.closing {
+          animation: fadeOut 0.3s ease-out forwards;
+        }
+
+        .form-select {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+        }
+
+        .form-select:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+        }
+
+        .form-select:hover {
+          border-color: #85435e !important;
+        }
+
+        .form-control {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+        }
+
+        .form-control:hover {
+          border-color: #85435e !important;
+        }
+      `}</style>
+
+      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+        <h1 style={{ margin: 0, marginBottom: 8, fontWeight: 700 }}>SIRET</h1>
+        <p className="lead" style={{ margin: 0, marginBottom: 0, opacity: 0.95 }}>Sistema de Exportación de Cumplimientos</p>
       </header>
 
+      <div className="container py-4">
       <div style={{ width: '100%', marginTop: 20, marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
           <button
@@ -435,7 +615,7 @@ export default function SiretExportacion(){
             title="Mostrar años"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
-              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+              <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
             </svg>
             Años
           </button>
@@ -459,9 +639,33 @@ export default function SiretExportacion(){
             title="Ver entes"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
-              <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+              <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
             </svg>
             Entes
+          </button>
+
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setViewMode('comparativa')}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: viewMode === 'comparativa' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
+              color: viewMode === 'comparativa' ? '#fff' : '#681b32',
+              border: viewMode === 'comparativa' ? 'none' : '2px solid #681b32',
+              borderRadius: '8px',
+              fontWeight: 600,
+              transition: 'all 0.3s ease',
+              boxShadow: viewMode === 'comparativa' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+            }}
+            aria-pressed={viewMode === 'comparativa'}
+            title="Comparativa"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+              <path d="M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-7zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2z"/>
+            </svg>
+            Comparativa
           </button>
         </div>
       </div>
@@ -548,8 +752,8 @@ export default function SiretExportacion(){
                     fontWeight: 600
                   }}>
                     {(() => {
-                      const activesSet = entesActivosByYear[String(year)] || new Set();
-                      return activesSet.size;
+                      const activesArr = entesActivosByYear[String(year)] || [];
+                      return activesArr.length;
                     })()} Entes
                   </span>
                   <span style={{
@@ -604,7 +808,7 @@ export default function SiretExportacion(){
                           </h6>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <a
-                              href={`/ExportPDF?year=${encodeURIComponent(year)}`}
+                              href={`/SiretExportPDF?year=${encodeURIComponent(year)}`}
                               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
                               style={{
@@ -626,12 +830,12 @@ export default function SiretExportacion(){
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                               </svg>
                               Exportar PDF
                             </a>
                             <a
-                              href={`/ExportExcel?year=${encodeURIComponent(year)}`}
+                              href={`/SiretExportExcel?year=${encodeURIComponent(year)}`}
                               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
                               style={{
@@ -653,10 +857,38 @@ export default function SiretExportacion(){
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                               </svg>
                               Exportar Excel
                             </a>
+                            <button
+                              onClick={() => handleExportSQLYear(year)}
+                              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.25)'; e.currentTarget.style.background = '#f0f0f0'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)'; e.currentTarget.style.background = '#ffffff'; }}
+                              style={{
+                                background: '#ffffff',
+                                color: '#000000',
+                                border: '1px solid #d0d0d0',
+                                padding: '8px 16px',
+                                borderRadius: 8,
+                                fontWeight: 600,
+                                fontSize: 13,
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                textDecoration: 'none'
+                              }}
+                              title={`Exportar año ${year}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                              </svg>
+                              Exportar Año
+                            </button>
                           </div>
                         </div>
                         {displayMonths.length === 0 ? (
@@ -723,6 +955,7 @@ export default function SiretExportacion(){
                   <label htmlFor="entes-search" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Ente</label>
                   <input
                     id="entes-search"
+                    list="entes-search-list"
                     type="text"
                     className="form-control"
                     placeholder="Buscar ente"
@@ -730,6 +963,9 @@ export default function SiretExportacion(){
                     onChange={(e)=>setEntesSearch(e.target.value)}
                     style={{ borderRadius: '8px', padding: '10px 14px' }}
                   />
+                  <datalist id="entes-search-list">
+                    {(entes||[]).map((e,i)=>(<option key={i} value={e.title}/>))}
+                  </datalist>
                 </div>
                 <div className="col-md-6">
                   <label className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación</label>
@@ -769,7 +1005,7 @@ export default function SiretExportacion(){
                   {list.map(e => (
                     <div key={e.id} className="list-group-item list-group-item-action d-flex align-items-center">
                       <div style={{ width: 96, height: 96, flex: '0 0 96px' }} className="me-3 d-flex align-items-center justify-content-center">
-                        <img src={ASEBCS} alt={e.title} style={{ maxWidth: '88px', maxHeight: '88px' }} />
+                        <img src={e.img || ASEBCS} alt={e.title} style={{ maxWidth: '88px', maxHeight: '88px', objectFit: 'contain' }} />
                       </div>
                       <div className="flex-grow-1">
                         <h5 className="mb-1" style={{ margin: 0 }}>{e.title}</h5>
@@ -791,9 +1027,13 @@ export default function SiretExportacion(){
         </section>
       )}
 
+      {viewMode === 'comparativa' && (
+        <Comparativa />
+      )}
+
       {showMonthModal && (
-        <div className="modal-backdrop" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', zIndex:2500, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div className="modal-content" style={{ width:'95%', maxWidth:1100, maxHeight:'90vh', background:'#fff', borderRadius:12, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', zIndex:2500, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width:'95%', maxWidth:1100, maxHeight:'90vh', background:'#fff', borderRadius:12, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -960,7 +1200,9 @@ export default function SiretExportacion(){
                   </thead>
                   <tbody>
                     {(() => {
-                      const currentActivesSet = entesActivosByYear[String(monthModalYear)] || new Set();
+                      // entesActivosByYear guarda un arreglo de objetos {ente_id,...}; convertimos a Set de IDs
+                      const activesArr = entesActivosByYear[String(monthModalYear)] || [];
+                      const currentActivesSet = new Set(activesArr.map(a => Number(a.ente_id)));
                       const statusByEnte = new Map();
                       compliances.forEach(c => {
                         if (String(c.year) === String(monthModalYear) && String(c.month) === String(monthModalMonth)) {
@@ -1022,7 +1264,7 @@ export default function SiretExportacion(){
             <div style={{ padding:16, background:'#f8f9fa', borderTop:'1px solid #e9ecef', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div style={{ display:'flex', gap:10 }}>
                 <a
-                  href={`/ExportPDFMes?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}&q=${encodeURIComponent(monthModalSearchName)}&clasif=${encodeURIComponent(monthModalClasif || '')}&enteIds=${encodeURIComponent(filteredMonthEnteIds.join('-'))}`}
+                  href={`/SiretExportPDFMes?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}&q=${encodeURIComponent(monthModalSearchName)}&clasif=${encodeURIComponent(monthModalClasif || '')}&enteIds=${encodeURIComponent(filteredMonthEnteIds.join('-'))}`}
                   style={{
                     background:'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                     color:'#fff',
@@ -1044,12 +1286,12 @@ export default function SiretExportacion(){
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                   </svg>
                   Exportar PDF
                 </a>
                 <a
-                  href={`/ExportExcelMes?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}&q=${encodeURIComponent(monthModalSearchName)}&clasif=${encodeURIComponent(monthModalClasif || '')}&enteIds=${encodeURIComponent(filteredMonthEnteIds.join('-'))}`}
+                  href={`/SiretExportExcelMes?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}&q=${encodeURIComponent(monthModalSearchName)}&clasif=${encodeURIComponent(monthModalClasif || '')}&enteIds=${encodeURIComponent(filteredMonthEnteIds.join('-'))}`}
                   style={{
                     background:'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                     color:'#fff',
@@ -1071,7 +1313,7 @@ export default function SiretExportacion(){
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                   </svg>
                   Exportar Excel
                 </a>
@@ -1101,8 +1343,8 @@ export default function SiretExportacion(){
       )}
 
       {selectedEnte && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600 }}>
-          <div style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
+        <div className={`modal-backdrop${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600 }}>
+          <div className={`modal-content${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, flexShrink: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
@@ -1378,7 +1620,7 @@ export default function SiretExportacion(){
                     return (
                       <>
                         <a
-                          href={canExport ? `/ExportPDFEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
+                          href={canExport ? `/SiretExportPDFEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
                           style={{
                             background:'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                             color:'#fff',
@@ -1403,12 +1645,12 @@ export default function SiretExportacion(){
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                           </svg>
                           Exportar PDF
                         </a>
                         <a
-                          href={canExport ? `/ExportExcelEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
+                          href={canExport ? `/SiretExportExcelEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
                           style={{
                             background:'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                             color:'#fff',
@@ -1433,7 +1675,7 @@ export default function SiretExportacion(){
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                           </svg>
                           Exportar Excel
                         </a>
@@ -1465,6 +1707,7 @@ export default function SiretExportacion(){
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

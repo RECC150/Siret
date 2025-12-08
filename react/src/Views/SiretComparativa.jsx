@@ -486,58 +486,6 @@ export default function Comparativa() {
           border-color: #85435e !important;
         }
       `}</style>
-      {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center" href="#">
-            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            {/* Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur */}
-            ASEBCS
-          </a>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigaltion"
-          >
-            <span className="navbar-toggler-icon" />
-          </button>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <a className="nav-link" href="/inicio">Inicio</a>
-              </li>
-              <li className="nav-item dropdown">
-                <a
-                  className="nav-link dropdown-toggle active"
-                  href="#"
-                  id="cumplimientosDropdown"
-                  role="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Cumplimientos
-                </a>
-                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="cumplimientosDropdown">
-                  <li><a className="dropdown-item" href="/cumplimientos/mes-anio">Por mes y año</a></li>
-                  <li><a className="dropdown-item" href="/cumplimientos/por-ente">Por ente</a></li>
-                  <li><a className="dropdown-item" href="/cumplimientos/por-clasificacion">Por clasificación de entes</a></li>
-                  <li><a className="dropdown-item" href="/comparativa">Comparativa</a></li>
-                </ul>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-
-      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ fontWeight: 700, marginBottom: 8 }}>ASEBCS</h1>
-        <p className="lead" style={{ marginBottom: 0, opacity: 0.95 }}>Comparativa</p>
-      </header>
-
       <div className="container py-5">
       <div style={{ width: '100%', marginTop: 0, marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
@@ -1066,7 +1014,7 @@ export default function Comparativa() {
               onClick={() => {
                 const years = selectedYearsForMonthChart.join('-');
                 const month = selectedMonthForChart;
-                window.location.href = `/ExportPDFCom?years=${years}&month=${month}`;
+                window.location.href = `/SiretExportPDFCom?years=${years}&month=${month}`;
               }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 53, 69, 0.2)'; }}
@@ -1096,7 +1044,7 @@ export default function Comparativa() {
               onClick={() => {
                 const years = selectedYearsForMonthChart.join('-');
                 const month = selectedMonthForChart;
-                window.location.href = `/ExportExcelCom?years=${years}&month=${month}`;
+                window.location.href = `/SiretExportExcelCom?years=${years}&month=${month}`;
               }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(20, 83, 45, 0.2)'; }}
@@ -1274,4 +1222,3 @@ export default function Comparativa() {
     </div>
   );
 }
-

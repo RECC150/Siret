@@ -26,7 +26,7 @@ try {
 }
 
 // Obtener entes con su clasificacion
-$sql = "SELECT e.id, e.title, e.img, e.classification_id, COALESCE(c.name,'') AS classification
+$sql = "SELECT e.id, e.title, e.img, e.classification_id, COALESCE(c.name,'') AS classification, e.description, e.link
         FROM entes e
         LEFT JOIN classifications c ON e.classification_id = c.id
         ORDER BY e.title ASC";
@@ -61,6 +61,8 @@ foreach ($entes as $e) {
         'title' => $e['title'],
         'img' => $e['img'],
         'classification' => $e['classification'],
+        'description' => $e['description'] ?? '',
+        'link' => $e['link'] ?? '',
         'compliances' => isset($compliances[$e['id']]) ? $compliances[$e['id']] : []
     ];
 }

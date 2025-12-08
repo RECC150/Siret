@@ -25,6 +25,8 @@ try {
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 $title = isset($_POST['title']) ? trim($_POST['title']) : '';
 $classificationName = isset($_POST['classification']) ? trim($_POST['classification']) : '';
+$description = isset($_POST['description']) ? trim($_POST['description']) : '';
+$link = isset($_POST['link']) ? trim($_POST['link']) : '';
 
 if ($id <= 0 || $title === '') {
     http_response_code(400);
@@ -65,11 +67,11 @@ try {
     }
 
     if ($imgPath) {
-        $stmt = $pdo->prepare("UPDATE entes SET title = ?, classification_id = ?, img = ? WHERE id = ?");
-        $stmt->execute([$title, $classification_id, $imgPath, $id]);
+        $stmt = $pdo->prepare("UPDATE entes SET title = ?, classification_id = ?, img = ?, description = ?, link = ? WHERE id = ?");
+        $stmt->execute([$title, $classification_id, $imgPath, $description, $link, $id]);
     } else {
-        $stmt = $pdo->prepare("UPDATE entes SET title = ?, classification_id = ? WHERE id = ?");
-        $stmt->execute([$title, $classification_id, $id]);
+        $stmt = $pdo->prepare("UPDATE entes SET title = ?, classification_id = ?, description = ?, link = ? WHERE id = ?");
+        $stmt->execute([$title, $classification_id, $description, $link, $id]);
     }
 
     $pdo->commit();
@@ -79,6 +81,8 @@ try {
         'id' => $id,
         'title' => $title,
         'classification' => $classificationName,
+        'description' => $description,
+        'link' => $link,
         'img' => $imgPath,
         'message' => 'Ente actualizado exitosamente'
     ]);

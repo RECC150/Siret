@@ -1,21 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axiosClient from "../axios-client";
 import { useStateContext } from "../Contexts/ContextProvider";
 import { toast } from "react-toastify";
+import ASEBCS from "../assets/asebcs.jpg";
 
-/**
- * SimpleNavbar
- * - Muestra solo: botón "Iniciar sesión" (link) y botón "Cerrar sesión" (logout)
- * - Si no hay usuario autenticado -> solo "Iniciar sesión"
- * - Si hay usuario -> muestra "Cerrar sesión"
- */
 export default function Navbar() {
     const { user, setUser, setToken } = useStateContext();
     const [loading, setLoading] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const [openMenu, setOpenMenu] = useState(false);
     const menuRef = React.useRef();
+
+    // No mostrar navbar en login
+    if (location.pathname === '/login') {
+        return null;
+    }
+
+    // Apply body padding-top only while Navbar is mounted
+    useEffect(() => {
+        const prevPaddingTop = document.body.style.paddingTop;
+        document.body.style.paddingTop = '15px';
+        return () => {
+            document.body.style.paddingTop = prevPaddingTop;
+        };
+    }, []);
 
     // close menu on outside click
     React.useEffect(() => {
@@ -26,7 +37,7 @@ export default function Navbar() {
         return () => document.removeEventListener('click', onDoc);
     }, []);
 
-    // (Opcional) obtener usuario al montar si aún no está en contexto
+    // obtener usuario al montar si aún no está en contexto
     useEffect(() => {
         if (!user || !user.id) {
             axiosClient
@@ -41,84 +52,124 @@ export default function Navbar() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const onLogout = async (ev) => {
-        ev && ev.preventDefault();
+    const performLogout = async () => {
         setLoading(true);
         try {
             await axiosClient.post("/logout");
         } catch (err) {
             // ignorar error; igualmente limpiamos el estado local
         } finally {
-            // limpiar contexto / localStorage
             setUser({});
             setToken(null);
             localStorage.removeItem("user_id");
             localStorage.removeItem("permisos");
             toast.success("Sesión cerrada");
             setLoading(false);
-            // opcional: redirigir al inicio o login
-            navigate("/");
+            navigate("/login", { replace: true });
+            // Fallback duro por si el router no navega
+            setTimeout(() => { try { window.location.assign('/login'); } catch (_) {} }, 150);
         }
     };
 
+    const onLogoutClick = (ev) => {
+        ev && ev.preventDefault();
+        setShowLogoutConfirm(true);
+    };
+
     return (
-        <header className="w-full bg-neutral-900 py-3 px-4 shadow-sm">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-                <div className="space-x-10 flex items-center">
-                    <Link
-                        to="/services/new"
-                        className="text-white bg-green-700 py-2 px-4 text-md"
-                    >
-                        Nuevo Servicio
-                    </Link>
-                    <Link to="/dashboard" className="text-white font-bold">
-                        Inicio
-                    </Link>
-
-                    <Link to="/users" className="text-white font-bold">
-                        Usuarios
-                    </Link>
-
-                    {/* Cumplimientos dropdown */}
-                    <div className="relative inline-block text-left" ref={menuRef}>
-                        <button type="button" aria-haspopup="true" aria-expanded={openMenu} onClick={() => setOpenMenu(v=>!v)} className="text-white font-bold px-3 py-2">
-                            Cumplimientos ▾
-                        </button>
-                        {openMenu && (
-                            <div className="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-                                <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                                    <a href="/cumplimientos/mes-anio" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Por mes y año</a>
-                                    <a href="/cumplimientos/por-ente" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Por ente</a>
-                                    <a href="/cumplimientos/por-clasificacion" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">Por clasificación de entes</a>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <Link to="/comparativa" className="text-white font-bold">
-                        Comparativo
-                    </Link>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    {!user || !user.id ? (
-                        <Link
-                            to="/login"
-                            className="px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition"
-                        >
-                            Iniciar sesión
-                        </Link>
-                    ) : (
-                        <button
-                            onClick={onLogout}
-                            disabled={loading}
-                            className="px-4 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-60"
-                        >
-                            {loading ? "Cerrando..." : "Cerrar sesión"}
-                        </button>
-                    )}
+        <React.Fragment>
+        <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+            <div className="container-fluid">
+                <Link to="/Siret" className="navbar-brand d-flex align-items-center">
+                    <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
+                    SIRET
+                </Link>
+                <button
+                    className="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarNav"
+                    aria-controls="navbarNav"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation"
+                >
+                    <span className="navbar-toggler-icon"></span>
+                </button>
+                <div className="collapse navbar-collapse" id="navbarNav">
+                    <ul className="navbar-nav me-auto">
+                        <li className="nav-item">
+                            <Link to="/Siret" className="nav-link">
+                                Inicio
+                            </Link>
+                        </li>
+                        <li className="nav-item dropdown" ref={menuRef}>
+                            <a
+                                className="nav-link dropdown-toggle"
+                                href="#"
+                                id="vistasDropdown"
+                                role="button"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                onClick={() => setOpenMenu(!openMenu)}
+                            >
+                                Vistas
+                            </a>
+                            <ul className="dropdown-menu" aria-labelledby="vistasDropdown">
+                                <li>
+                                    <Link to="/SiretEntes" className="dropdown-item">Entes</Link>
+                                </li>
+                                <li>
+                                    <Link to="/SiretClasificaciones" className="dropdown-item">Clasificaciones</Link>
+                                </li>
+                                <li>
+                                    <Link to="/SiretCumplimientos" className="dropdown-item">Cumplimientos</Link>
+                                </li>
+                                <li>
+                                    <Link to="/SiretExportacion" className="dropdown-item">Exportación</Link>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <ul className="navbar-nav ms-auto">
+                        <li className="nav-item">
+                            <button
+                                onClick={onLogoutClick}
+                                disabled={loading}
+                                className="nav-link active btn btn-link"
+                                style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+                            >
+                                {loading ? "Cerrando..." : "Cerrar Sesión"}
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             </div>
-        </header>
+        </nav>
+
+        {showLogoutConfirm && (
+            <div className="modal-backdrop" style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000 }}>
+                <div className="modal-content" style={{ background:'#fff', borderRadius:12, padding:24, maxWidth:420, width:'90%', boxShadow:'0 10px 30px rgba(0,0,0,0.2)' }}>
+                    <h5 style={{ marginBottom:12, fontWeight:700, color:'#2c3e50' }}>¿Cerrar sesión?</h5>
+                    <p style={{ marginBottom:20, color:'#495057' }}>Se cerrará tu sesión actual y volverás a la pantalla de inicio de sesión.</p>
+                    <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => setShowLogoutConfirm(false)}
+                            disabled={loading}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            className="btn btn-danger"
+                            onClick={() => { setShowLogoutConfirm(false); performLogout(); }}
+                            disabled={loading}
+                        >
+                            {loading ? 'Cerrando...' : 'Sí, cerrar sesión'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </React.Fragment>
     );
 }

@@ -13,7 +13,7 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        user::updateOrCreate(
+        User::updateOrCreate(
             ['name' => 'admin'],
             [
                 'password'  => bcrypt('Siret'),

@@ -12,6 +12,8 @@ export default function SiretEntes() {
   const [editEnte, setEditEnte] = useState(null);
   const editTitleRef = useRef();
   const editClassRef = useRef();
+  const editDescRef = useRef();
+  const editLinkRef = useRef();
   const [editIconFile, setEditIconFile] = useState(null);
   const [editIconPreview, setEditIconPreview] = useState(null);
 
@@ -23,12 +25,52 @@ export default function SiretEntes() {
   const [newIconFile, setNewIconFile] = useState(null);
   const [newIconPreview, setNewIconPreview] = useState(null);
   const newTitleRef = useRef();
+  const newDescRef = useRef();
+  const newLinkRef = useRef();
   const [newClassification, setNewClassification] = useState('');
 
   // Filters for the catalog
   const [enteQuery, setEnteQuery] = useState("");
   const [selectedEnteId, setSelectedEnteId] = useState(null);
   const [filterClasif, setFilterClasif] = useState('Todos');
+
+  // Estado para animación de cierre de modales
+  const [closingModalIndex, setClosingModalIndex] = useState(null);
+
+  // Funciones helper para cerrar modales con animación
+  const closeModalWithAnimation = (modalIndex, callback) => {
+    setClosingModalIndex(modalIndex);
+    setTimeout(() => {
+      callback();
+      setClosingModalIndex(null);
+    }, 300);
+  };
+
+  const closeAddModal = () => {
+    closeModalWithAnimation('add', () => {
+      setAddModalOpen(false);
+      setNewIconFile(null);
+      setNewIconPreview(null);
+      setNewClassification('');
+      if (newTitleRef.current) newTitleRef.current.value = '';
+      if (newDescRef.current) newDescRef.current.value = '';
+      if (newLinkRef.current) newLinkRef.current.value = '';
+    });
+  };
+
+  const closeEditModal = () => {
+    closeModalWithAnimation('edit', () => {
+      setEditEnte(null);
+      setEditIconFile(null);
+      setEditIconPreview(null);
+    });
+  };
+
+  const closeDeleteModal = () => {
+    closeModalWithAnimation('delete', () => {
+      setToDelete(null);
+    });
+  };
 
   // Load classifications from API
   const fetchClasificaciones = async () => {
@@ -67,6 +109,8 @@ export default function SiretEntes() {
     if (!editEnte) return;
     const title = editTitleRef.current?.value?.trim() || editEnte.title;
     const classification = editClassRef.current?.value?.trim() || editEnte.classification;
+    const description = editDescRef.current?.value?.trim() || '';
+    const link = editLinkRef.current?.value?.trim() || '';
 
     if (!title) {
       setToast({ message: 'El nombre es requerido', type: 'warning' });
@@ -79,6 +123,8 @@ export default function SiretEntes() {
       form.append('id', editEnte.id);
       form.append('title', title);
       form.append('classification', classification);
+      form.append('description', description);
+      form.append('link', link);
       if (editIconFile) form.append('icon', editIconFile);
 
       const res = await fetch(apiUrl, { method: "POST", body: form });
@@ -103,6 +149,8 @@ export default function SiretEntes() {
   const createEnte = async () => {
     const title = newTitleRef.current?.value?.trim() || '';
     const classification = newClassification || '';
+    const description = newDescRef.current?.value?.trim() || '';
+    const link = newLinkRef.current?.value?.trim() || '';
 
     if (!title) {
       setToast({ message: 'El nombre es requerido', type: 'warning' });
@@ -114,6 +162,8 @@ export default function SiretEntes() {
       const form = new FormData();
       form.append('title', title);
       if (classification) form.append('classification', classification);
+      form.append('description', description);
+      form.append('link', link);
       if (newIconFile) form.append('icon', newIconFile);
 
       const res = await fetch(apiUrl, { method: 'POST', body: form });
@@ -163,6 +213,8 @@ export default function SiretEntes() {
       setEditIconFile(null);
       if (editTitleRef.current) editTitleRef.current.value = editEnte.title || '';
       if (editClassRef.current) editClassRef.current.value = editEnte.classification || '';
+      if (editDescRef.current) editDescRef.current.value = editEnte.description || '';
+      if (editLinkRef.current) editLinkRef.current.value = editEnte.link || '';
     } else {
       setEditIconPreview(null);
       setEditIconFile(null);
@@ -187,29 +239,85 @@ export default function SiretEntes() {
   });
 
   return (
-    <div className="container py-4">
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center" href="#">
-            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            SIRET
-          </a>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item"><a className="nav-link active" href="/SiretEntes">Entes</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretClasificaciones">Clasificaciones</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretCumplimientos">Cumplimientos</a></li>
-              <li className="nav-item"><a className="nav-link" href="/SiretExportacion">Exportar</a></li>
-            </ul>
-          </div>
-        </div>
-      </nav>
+    <div className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
 
-      <header style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', textAlign: 'center', padding: '28px 0', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-        <h1 style={{ margin: 0, marginBottom: 8, fontSize: 32, fontWeight: 700 }}>SIRET</h1>
-        <p style={{ margin: 0, fontSize: 16, opacity: 0.95 }}>Catálogo de entes</p>
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+        }
+
+        .modal-backdrop {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-backdrop.closing {
+          animation: fadeOut 0.2s ease-out forwards;
+        }
+
+        .modal-content {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-content.closing {
+          animation: fadeOut 0.3s ease-out forwards;
+        }
+
+        .form-select {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+        }
+
+        .form-select:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+        }
+
+        .form-select:hover {
+          border-color: #85435e !important;
+        }
+
+        .form-control {
+          border: 1px solid #ddd !important;
+          transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+          border-color: #85435e !important;
+          box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+          background-color: #fff0f5 !important;
+          color: #333 !important;
+        }
+
+        .form-control:hover {
+          border-color: #85435e !important;
+        }
+      `}</style>
+
+      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+        <h1 style={{ margin: 0, marginBottom: 8, fontWeight: 700 }}>SIRET</h1>
+        <p className="lead" style={{ margin: 0, marginBottom: 0, opacity: 0.95 }}>Catálogo de entes</p>
       </header>
 
+      <div className="container py-4">
       <section style={{ marginTop: 16 }}>
         <div className="card" style={{ border: 'none', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: 20 }}>
           <div className="card-body" style={{ padding: 24 }}>
@@ -233,7 +341,7 @@ export default function SiretEntes() {
               <div className="col-md-6">
                 <label className="form-label" style={{ fontWeight: 500, color: '#495057', marginBottom: 8 }}>Clasificación</label>
                 <select className="form-select" value={filterClasif} onChange={e=>setFilterClasif(e.target.value)} style={{ borderRadius: 8, padding: '10px 14px', border: '2px solid #e9ecef' }}>
-                  <option value="Todos">Todos</option>
+                  <option value="Todos">Todas las clasificaciones</option>
                   {classifications.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
                 </select>
               </div>
@@ -303,50 +411,63 @@ export default function SiretEntes() {
       </section>
 
       {addModalOpen && (
-        <div style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
-          <div style={{ width: 600, maxWidth: '95%', background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
-            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '20px 24px' }}>
-              <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'add' ? ' closing' : ''}`} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
+          <div className={`modal-content${closingModalIndex === 'add' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '18px 24px', flexShrink: 0 }}>
+              <h4 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 12, verticalAlign: 'middle' }}>
                   <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                 </svg>
                 Nuevo Ente
               </h4>
             </div>
 
-            <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
-              <div style={{ width: 200, height: 200, borderRadius: 12, overflow: 'hidden', border: '3px solid #e9ecef', background: '#f8f9fa', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                <img src={newIconPreview || ASEBCS} alt="Icono ente" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-
-              <div style={{ width: '100%' }}>
-                <label style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'block', color: '#495057' }}>Cargar imagen</label>
-                <input type="file" accept="image/*" onChange={(ev)=>{
-                  const f = ev.target.files && ev.target.files[0];
-                  if (f) { setNewIconFile(f); setNewIconPreview(URL.createObjectURL(f)); }
-                }} className="form-control" style={{ borderRadius: 8, border: '2px solid #e9ecef' }} />
-              </div>
-
-              <div style={{ width: '100%' }}>
-                <div>
-                  <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50' }}>Nombre</label>
-                  <input ref={newTitleRef} className="form-control form-control-lg" style={{ borderRadius: 8, border: '2px solid #e9ecef', padding: '12px 16px' }} />
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', flex: 1 }}>
+              <div style={{ display: 'flex', gap: 30, alignItems: 'flex-start' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ width: 200, aspectRatio: '4/5', borderRadius: 10, overflow: 'hidden', border: '2px solid #e9ecef', background: '#f8f9fa', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={newIconPreview || ASEBCS} alt="Icono ente" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, display: 'block', color: '#495057' }}>Cargar imagen</label>
+                    <input type="file" accept="image/*" onChange={(ev)=>{
+                      const f = ev.target.files && ev.target.files[0];
+                      if (f) { setNewIconFile(f); setNewIconPreview(URL.createObjectURL(f)); }
+                    }} className="form-control" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '8px 10px', fontSize: '13px' }} />
+                  </div>
                 </div>
 
-                <div style={{ marginTop:16 }}>
-                  <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50' }}>Clasificación</label>
-                  <select value={newClassification} onChange={e=>setNewClassification(e.target.value)} className="form-select form-select-lg" style={{ borderRadius: 8, border: '2px solid #e9ecef', padding: '12px 16px' }}>
-                    <option value="">-- Seleccionar --</option>
-                    {classifications.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
-                  </select>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Nombre <span style={{ color: '#dc3545' }}>*</span></label>
+                    <input ref={newTitleRef} className="form-control" placeholder="Ej: Ministerio de Salud" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Clasificación</label>
+                    <select value={newClassification} onChange={e=>setNewClassification(e.target.value)} className="form-select" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }}>
+                      <option value="">-- Seleccionar --</option>
+                      {classifications.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Link de página web <span style={{ color: '#6c757d', fontSize: '13px', fontWeight: 400 }}>(opcional)</span></label>
+                    <input ref={newLinkRef} className="form-control" placeholder="https://ejemplo.com" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }} />
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Descripción <span style={{ color: '#6c757d', fontSize: '13px', fontWeight: 400 }}>(opcional)</span></label>
+                <textarea ref={newDescRef} className="form-control" placeholder="Detalles adicionales del ente..." style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px', minHeight: '140px', resize: 'vertical' }} />
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background: '#f8f9fa', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button className="btn" onClick={()=>{ setAddModalOpen(false); setNewIconFile(null); setNewIconPreview(null); setNewClassification(''); if (newTitleRef.current) newTitleRef.current.value=''; }} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
-              <button className="btn" onClick={createEnte} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <div style={{ borderTop: '1px solid #e9ecef', padding: '14px 24px', background: '#f8f9fa', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+              <button className="btn" onClick={closeAddModal} style={{ background: '#fff', color: '#6c757d', border: '1px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 6, fontSize: '13px', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
+              <button className="btn" onClick={createEnte} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 6, fontSize: '13px', boxShadow: '0 2px 6px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(104, 27, 50, 0.3)'; }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 6, verticalAlign: 'middle' }}>
                   <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                 </svg>
                 Crear
@@ -357,50 +478,63 @@ export default function SiretEntes() {
       )}
 
       {editEnte && (
-        <div style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
-          <div style={{ width: 600, maxWidth: '95%', background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
-            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '20px 24px' }}>
-              <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'edit' ? ' closing' : ''}`} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
+          <div className={`modal-content${closingModalIndex === 'edit' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '18px 24px', flexShrink: 0 }}>
+              <h4 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 12, verticalAlign: 'middle' }}>
                   <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
                 </svg>
                 Editar Ente
               </h4>
             </div>
 
-            <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
-              <div style={{ width: 200, height: 200, borderRadius: 12, overflow: 'hidden', border: '3px solid #e9ecef', background: '#f8f9fa', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                <img src={editIconPreview || ASEBCS} alt="Icono ente" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-
-              <div style={{ width: '100%' }}>
-                <label style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, display: 'block', color: '#495057' }}>Cambiar imagen</label>
-                <input type="file" accept="image/*" onChange={(ev)=>{
-                  const f = ev.target.files && ev.target.files[0];
-                  if (f) { setEditIconFile(f); setEditIconPreview(URL.createObjectURL(f)); }
-                }} className="form-control" style={{ borderRadius: 8, border: '2px solid #e9ecef' }} />
-              </div>
-
-              <div style={{ width: '100%' }}>
-                <div>
-                  <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50' }}>Nombre</label>
-                  <input defaultValue={editEnte.title} ref={editTitleRef} className="form-control form-control-lg" style={{ borderRadius: 8, border: '2px solid #e9ecef', padding: '12px 16px' }} />
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', flex: 1 }}>
+              <div style={{ display: 'flex', gap: 30, alignItems: 'flex-start' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ width: 400, height: 260, borderRadius: 10, overflow: 'hidden', border: '2px solid #e9ecef', background: '#f8f9fa', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={editIconPreview || ASEBCS} alt="Icono ente" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, display: 'block', color: '#495057' }}>Cambiar imagen</label>
+                    <input type="file" accept="image/*" onChange={(ev)=>{
+                      const f = ev.target.files && ev.target.files[0];
+                      if (f) { setEditIconFile(f); setEditIconPreview(URL.createObjectURL(f)); }
+                    }} className="form-control" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '8px 10px', fontSize: '13px' }} />
+                  </div>
                 </div>
 
-                <div style={{ marginTop:16 }}>
-                  <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50' }}>Clasificación</label>
-                  <select defaultValue={editEnte.classification || ''} ref={editClassRef} className="form-select form-select-lg" style={{ borderRadius: 8, border: '2px solid #e9ecef', padding: '12px 16px' }}>
-                    <option value="">-- Seleccionar --</option>
-                    {classifications.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
-                  </select>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Nombre <span style={{ color: '#dc3545' }}>*</span></label>
+                    <input defaultValue={editEnte.title} ref={editTitleRef} className="form-control" placeholder="Ej: Ministerio de Salud" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Clasificación</label>
+                    <select defaultValue={editEnte.classification || ''} ref={editClassRef} className="form-select" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }}>
+                      <option value="">-- Seleccionar --</option>
+                      {classifications.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Link de página web <span style={{ color: '#6c757d', fontSize: '13px', fontWeight: 400 }}>(opcional)</span></label>
+                    <input defaultValue={editEnte.link} ref={editLinkRef} className="form-control" placeholder="https://ejemplo.com" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }} />
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Descripción <span style={{ color: '#6c757d', fontSize: '13px', fontWeight: 400 }}>(opcional)</span></label>
+                <textarea defaultValue={editEnte.description} ref={editDescRef} className="form-control" placeholder="Detalles adicionales del ente..." style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px', minHeight: '140px', resize: 'vertical' }} />
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background: '#f8f9fa', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button className="btn" onClick={()=>{ setEditEnte(null); setEditIconFile(null); setEditIconPreview(null); }} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
-              <button className="btn" onClick={saveEdit} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <div style={{ borderTop: '1px solid #e9ecef', padding: '14px 24px', background: '#f8f9fa', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+              <button className="btn" onClick={closeEditModal} style={{ background: '#fff', color: '#6c757d', border: '1px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 6, fontSize: '13px', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
+              <button className="btn" onClick={saveEdit} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 6, fontSize: '13px', boxShadow: '0 2px 6px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(104, 27, 50, 0.3)'; }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 6, verticalAlign: 'middle' }}>
                   <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                 </svg>
                 Guardar
@@ -411,8 +545,8 @@ export default function SiretEntes() {
       )}
 
       {toDelete && (
-        <div style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
-          <div style={{ width: 480, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+        <div className={`modal-backdrop${closingModalIndex === 'delete' ? ' closing' : ''}`} style={{ position:'fixed',left:0,top:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000 }}>
+          <div className={`modal-content${closingModalIndex === 'delete' ? ' closing' : ''}`} style={{ width: 480, background:'#fff', borderRadius:12, overflow:'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             <div style={{ background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)', color: '#fff', padding: '20px 24px' }}>
               <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
@@ -424,8 +558,8 @@ export default function SiretEntes() {
             <div style={{ padding: '24px' }}>
               <p style={{ margin: 0, fontSize: 15, color: '#2c3e50' }}>¿Estás seguro de que deseas eliminar el ente <strong style={{ color: '#681b32' }}>{toDelete.title}</strong>?</p>
             </div>
-            <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background: '#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
-              <button className="btn" onClick={()=>setToDelete(null)} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
+            <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background:'#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
+              <button className="btn" onClick={closeDeleteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
               <button className="btn" onClick={softDelete} style={{ background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(220, 53, 69, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(220, 53, 69, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(220, 53, 69, 0.3)'; }}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
                   <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
@@ -445,6 +579,8 @@ export default function SiretEntes() {
           onClose={() => setToast(null)}
         />
       )}
+
+      </div>
 
     </div>
   );

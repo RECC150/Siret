@@ -423,6 +423,7 @@ export default function SiretExportPDFEnte(){
 
   return (
     <div style={containerStyle}>
+      <style>{`.navbar { display: none !important; }`}</style>
       <motion.button style={toggleBtnStyle} onClick={() => setSidebarVisible(s => !s)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
         {sidebarVisible ? '‹' : '›'}
       </motion.button>

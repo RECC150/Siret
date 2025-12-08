@@ -8,9 +8,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 export default function DefaultLayout() {
     const { user, token, setUser, setToken } = useStateContext();
 
-    // Si no hay token, redirige al inicio.
+    // Si no hay token, redirige al login.
     if (!token) {
-        return <Navigate to="/inicio" />;
+        return <Navigate to="/login" />;
     }
 
     const onLogout = (ev) => {
