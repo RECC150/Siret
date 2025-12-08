@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import styles from "./css/CumplimientosMesAnio.module.css";
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 import ASEBCS from "../assets/asebcs.jpg";
 import a from "../assets/a.png";
@@ -81,35 +82,43 @@ export default function CumplimientosMesAnio() {
   ];
 
   const [enteQuery] = useState('');
-  const [year, setYear] = useState(null); // será inicializado cuando carguen los años
-  const [month, setMonth] = useState('Todos');
-  const [order, setOrder] = useState('asc');
+  const [year, setYear] = useLocalStorage('cumplimientos_mesAnio_year', null);
+  const [month, setMonth] = useLocalStorage('cumplimientos_mesAnio_month', 'Todos');
   const [results, setResults] = useState([]);
 
-  // Efecto: cuando los años cambien, establecer el año al primero disponible (más reciente)
+  // Efecto: cuando los años cambien y el año guardado sea null, establecer el año al primero disponible (solo primera carga)
   useEffect(() => {
-    if (years && years.length > 0) {
+    if (years && years.length > 0 && year === null) {
       const firstYear = String(years[0]);
-      if (year !== firstYear) {
-        setYear(firstYear);
-      }
+      setYear(firstYear);
     }
-  }, [years]);
+  }, [years, year, setYear]);
+
+  // Nuevo: estado para tamaño de ventana responsivo
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+  // Efecto: escuchar cambios en el tamaño de la ventana
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Control de vista (mostrar solo lista / graficas / indicadores / todo)
-  const [viewMode, setViewMode] = useState('lista'); // 'lista' | 'graficas' | 'indicadores'
+  const [viewMode, setViewMode] = useLocalStorage('cumplimientos_mesAnio_viewMode', 'lista');
 
   // Nuevo: estado para modal / mes seleccionado
   const [selectedMonth, setSelectedMonth] = useState(null);
-  const [modalNameQuery, setModalNameQuery] = useState('');
-  const [modalClassFilter, setModalClassFilter] = useState('Todos');
+  const [modalNameQuery, setModalNameQuery] = useLocalStorage('cumplimientos_mesAnio_modalNameQuery', '');
+  const [modalClassFilter, setModalClassFilter] = useLocalStorage('cumplimientos_mesAnio_modalClassFilter', 'Todos');
   const [pieLoadedMonths, setPieLoadedMonths] = useState({});
   const openModal = (m) => {
     setSelectedMonth(m);
     try { document.body.style.overflow = 'hidden'; } catch (e) {}
-    // reset modal search filters
-    setModalNameQuery('');
-    setModalClassFilter('Todos');
+    // NO reset modal search filters - mantener valores guardados
     // ensure pieLoaded flag for this month is reset so animation can run
     setPieLoadedMonths(prev => ({ ...prev, [m]: false }));
   };
@@ -138,10 +147,10 @@ export default function CumplimientosMesAnio() {
 
   // Nuevo: modal por ente y sección activa
   const [selectedEnte, setSelectedEnte] = useState(null);
-  const [activeSection, setActiveSection] = useState('graficas'); // 'indicadores' | 'graficas' | 'reportes'
+  const [activeSection, setActiveSection] = useLocalStorage('cumplimientos_mesAnio_activeSection', 'graficas');
 
   // Nuevo: años habilitados para area chart (map year->bool). Se inicializa cuando se selecciona entidad.
-  const [enabledYears, setEnabledYears] = useState({});
+  const [enabledYears, setEnabledYears] = useLocalStorage('cumplimientos_mesAnio_enabledYears', {});
 
   // Nuevo: estado para animación de cierre de modales
   const [closingModalIndex, setClosingModalIndex] = useState(null);
@@ -157,7 +166,7 @@ export default function CumplimientosMesAnio() {
 
   // Nuevo: selectores para Indicadores generales (abajo de la lista)
   const [generalYear, setGeneralYear] = useState(year);
-  const [generalMonthSelection, setGeneralMonthSelection] = useState('Todos');
+  const [generalMonthSelection, setGeneralMonthSelection] = useLocalStorage('cumplimientos_mesAnio_generalMonth', 'Todos');
 
   // Nuevo: calcular meses con datos para el año seleccionado entre los resultados
   const generalMonthsWithData = useMemo(() => {
@@ -185,19 +194,6 @@ export default function CumplimientosMesAnio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
 
-  // Sincronizar generalMonthSelection <-> month
-  useEffect(() => {
-    if (generalMonthSelection !== month) {
-      setMonth(generalMonthSelection);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generalMonthSelection]);
-
-  useEffect(() => {
-    if (generalMonthSelection !== month) setGeneralMonthSelection(month);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
-
   // Mantener la vista en el componente cuando cambien filtros año/mes
   useEffect(() => {
     if (containerRef.current) {
@@ -224,7 +220,7 @@ export default function CumplimientosMesAnio() {
         return e.compliances.some(c => c.year === yearNum && c.month === month);
       }
     });
-    filtered.sort((a, b) => (order === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)));
+    filtered.sort((a, b) => a.title.localeCompare(b.title));
     setResults(filtered);
   };
 
@@ -462,7 +458,7 @@ export default function CumplimientosMesAnio() {
     // debounce could be added later; for design we call immediately
     handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, order]);
+  }, [year, month]);
 
   // Nuevo: recalcular cuando cambien los datos cargados desde API
   useEffect(() => {
@@ -570,16 +566,29 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 };
 
 // Custom XAxis tick: muestra solo el mes
-const CustomXAxisTick = ({ x, y, payload }) => {
-  const monthLabel = abbrToFull[payload.value] || (payload.value && payload.value.toString().toUpperCase()) || payload.value;
+const CustomXAxisTick = ({ x, y, payload, windowWidth }) => {
+  // Responsivo: ajustar etiquetas de meses según tamaño de ventana
+  const width = windowWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const isMobile = width < 480;
+  const isTablet = width < 769;
+
+  let monthLabel = abbrToFull[payload.value] || (payload.value && payload.value.toString().toUpperCase()) || payload.value;
+
+  // "Enero" -> "Ene" en tablet -> "E" en mobile
+  if (isMobile && monthLabel.length > 1) {
+    monthLabel = monthLabel[0]; // Solo primera letra
+  } else if (isTablet && monthLabel.length > 3) {
+    monthLabel = monthLabel.substring(0, 3); // Primeras 3 letras
+  }
+
+  const fontSize = isMobile ? 10 : isTablet ? 11 : 12;
+
   return (
     <g transform={`translate(${x},${y + 12})`}>
-      <text x={0} y={0} textAnchor="middle" fill="#666" fontSize={12}>{monthLabel}</text>
+      <text x={0} y={0} textAnchor="middle" fill="#666" fontSize={fontSize}>{monthLabel}</text>
     </g>
   );
-};
-
-// Custom label centrado para mostrar los años seleccionados
+};// Custom label centrado para mostrar los años seleccionados
 const CustomYearsLabel = (props) => {
   const { viewBox, enabledYears } = props;
   if (!viewBox) return null;
@@ -860,14 +869,6 @@ const computeICForEnteYear = (ente, y) => {
                   {months.map(m => (<option key={m} value={m}>{m}</option>))}
                 </select>
               </div>
-
-              <div className="col-md-3">
-                <label htmlFor="orden" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Ordenar por</label>
-                <select id="orden" className="form-select" value={order} onChange={e => setOrder(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }}>
-                  <option value="asc">A → Z</option>
-                  <option value="desc">Z → A</option>
-                </select>
-              </div>
             </form>
           </div>
         </div>
@@ -876,34 +877,23 @@ const computeICForEnteYear = (ente, y) => {
           {results.length === 0 ? (
             <p>No se encontraron entidades que cumplan ese criterio.</p>
           ) : (
-
             <div className="list-group">
               {results.map(r => (
-                <div key={r.id} className="list-group-item list-group-item-action d-flex align-items-center">
-                  <div style={{ width: 96, height: 96, flex: '0 0 96px' }} className="me-3 d-flex align-items-center justify-content-center">
-                    <img src={r.img || ASEBCS} alt={r.title} style={{ maxWidth: '88px', maxHeight: '88px', objectFit: 'contain' }} />
-                  </div>
-
-                  <div className="flex-grow-1">
-                    <h5 className="mb-1">{r.title}</h5>
-                    <p className="mb-1">
-                      <small className="text-white px-2 py-1 rounded" style={{ background: 'linear-gradient(to right, #681b32, #200b07)' }}>
-                        {r.classification || 'Municipios y Organismos Operadores municipales'}
-                      </small>
-                    </p>
-
-                    <div>
-                      {r.compliances
-                        .filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
+                <div key={r.id} className={`list-group-item ${styles.listGroupItem}`}>
+                  <div className={styles.listGroupImage}><img src={r.img} alt={r.title} style={{maxWidth:88,maxHeight:88}} onError={(e) => {e.target.style.display = 'none';}}/></div>
+                  <div className={styles.listGroupContent}>
+                    <h5 className={`mb-1 ${styles.listGroupTitle}`}>{r.title}</h5>
+                    <p className="mb-1"><small className="text-white px-2 py-1 rounded" style={{background:'linear-gradient(to right,#681b32,#200b07)'}}>{r.classification}</small></p>
+                    <div className={styles.listGroupBadges}>
+                      {r.compliances.filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
                         .map((c, i) => {
                           const variant = getBadgeVariant(c.status);
                           return (<span key={i} className={`badge ${variant} me-2`} title={tipoLabels[c.status]}>{c.month} {c.year}</span>);
                         })}
                     </div>
                   </div>
-
-                  <div className="text-end" style={{ minWidth: 180 }}>
-                    <button className="btn btn-sm btn-magenta" onClick={() => openEnteModal(r)}>Ver detalle</button>
+                  <div style={{textAlign:'right'}}>
+                    <button className={`btn btn-sm btn-magenta ${styles.listGroupButton}`} onClick={() => openEnteModal(r)}>Ver detalle</button>
                   </div>
                 </div>
               ))}
@@ -915,11 +905,13 @@ const computeICForEnteYear = (ente, y) => {
                 <div className={`modal-content${closingModalIndex === 'ente' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
 
                   {/* HEADER CON TÍTULO Y TABS */}
-                  <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, flexShrink: 0 }}>
+                  <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 768 ? '12px 16px' : 20, paddingLeft: windowWidth < 768 ? 16 : 24, flexShrink: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <div>
-                        <h5 style={{ margin: 0, fontWeight: 700, fontSize: 20 }}>{selectedEnte.title}</h5>
-                        <div style={{ opacity: 0.9, fontSize: 13, marginTop: 2 }}>{selectedEnte.classification || 'Sin clasificación'}</div>
+                        <h5 style={{ margin: 0, fontWeight: 700, fontSize: windowWidth < 768 ? 16 : 20 }}>{selectedEnte.title}</h5>
+                        {windowWidth >= 768 && (
+                          <div style={{ opacity: 0.9, fontSize: 13, marginTop: 2 }}>{selectedEnte.classification || 'Sin clasificación'}</div>
+                        )}
                       </div>
                     </div>
 
@@ -950,9 +942,11 @@ const computeICForEnteYear = (ente, y) => {
                           Gráficas
                         </button>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', marginLeft: 8 }}>
-                        <small style={{ opacity: 0.9 }}>IC = (Número de meses que cumplió / Número de meses transcurridos) * 100</small>
-                      </div>
+                      {windowWidth >= 768 && (
+                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: 8 }}>
+                          <small style={{ opacity: 0.9 }}>IC = (Número de meses que cumplió / Número de meses transcurridos) * 100</small>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1085,7 +1079,7 @@ const computeICForEnteYear = (ente, y) => {
                               barGap={1}
                             >
                               <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="month" tick={<CustomXAxisTick />}>
+                              <XAxis dataKey="month" tick={<CustomXAxisTick windowWidth={windowWidth} />}>
                                 <Label content={<CustomYearsLabel enabledYears={enabledYears} />} position="bottom" />
                               </XAxis>
                               <YAxis
@@ -1179,8 +1173,8 @@ const computeICForEnteYear = (ente, y) => {
                   </div>
 
                   {/* FOOTER CON BOTONES DE EXPORTACIÓN Y CERRAR */}
-                  <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 12 }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ padding: windowWidth < 480 ? 12 : 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 8, flexWrap: windowWidth < 480 ? 'wrap' : 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <a
                         href="#"
                         onClick={(e) => { e.preventDefault(); handleExportPDF(); }}
@@ -1188,26 +1182,29 @@ const computeICForEnteYear = (ente, y) => {
                           background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                           color: '#fff',
                           border: 'none',
-                          padding: '8px 14px',
+                          padding: windowWidth < 480 ? '6px 10px' : '8px 14px',
                           fontWeight: 600,
                           borderRadius: 8,
-                          fontSize: 13,
+                          fontSize: windowWidth < 480 ? 11 : 13,
                           cursor: 'pointer',
                           boxShadow: '0 2px 6px rgba(220,53,69,0.35)',
                           transition: 'all 0.2s ease',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          textDecoration: 'none'
+                          gap: windowWidth < 480 ? 3 : 6,
+                          textDecoration: 'none',
+                          whiteSpace: 'nowrap'
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                        </svg>
-                        Exportar PDF
+                        {windowWidth < 480 ? null : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                          </svg>
+                        )}
+                        {windowWidth < 480 ? 'PDF' : 'Exportar PDF'}
                       </a>
                       <a
                         href="#"
@@ -1216,26 +1213,29 @@ const computeICForEnteYear = (ente, y) => {
                           background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                           color: '#fff',
                           border: 'none',
-                          padding: '8px 14px',
+                          padding: windowWidth < 480 ? '6px 10px' : '8px 14px',
                           fontWeight: 600,
                           borderRadius: 8,
-                          fontSize: 13,
+                          fontSize: windowWidth < 480 ? 11 : 13,
                           cursor: 'pointer',
                           boxShadow: '0 2px 6px rgba(20,83,45,0.35)',
                           transition: 'all 0.2s ease',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
-                          textDecoration: 'none'
+                          gap: windowWidth < 480 ? 3 : 6,
+                          textDecoration: 'none',
+                          whiteSpace: 'nowrap'
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                        </svg>
-                        Exportar Excel
+                        {windowWidth < 480 ? null : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                          </svg>
+                        )}
+                        {windowWidth < 480 ? 'Excel' : 'Exportar Excel'}
                       </a>
                     </div>
                     <button
@@ -1276,7 +1276,7 @@ const computeICForEnteYear = (ente, y) => {
                   </svg>
                   Filtros de búsqueda
                 </h6>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: windowWidth < 360 ? 4 : 8, flexWrap: 'wrap' }}>
                   <a
                     href="#"
                     onClick={(e) => { e.preventDefault(); handleExportPDFGraphics(); }}
@@ -1284,26 +1284,29 @@ const computeICForEnteYear = (ente, y) => {
                       background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                       color: '#fff',
                       border: 'none',
-                      padding: '8px 14px',
+                      padding: windowWidth < 360 ? '6px 10px' : '8px 14px',
                       fontWeight: 600,
                       borderRadius: 8,
-                      fontSize: 13,
+                      fontSize: windowWidth < 360 ? 11 : 13,
                       cursor: 'pointer',
                       boxShadow: '0 2px 6px rgba(220,53,69,0.35)',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 6,
-                      textDecoration: 'none'
+                      gap: windowWidth < 360 ? 3 : 6,
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap'
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                      <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                    </svg>
-                    Exportar PDF
+                    {windowWidth < 360 ? null : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                      </svg>
+                    )}
+                    {windowWidth < 360 ? 'PDF' : 'Exportar PDF'}
                   </a>
                   <a
                     href="#"
@@ -1312,26 +1315,29 @@ const computeICForEnteYear = (ente, y) => {
                       background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                       color: '#fff',
                       border: 'none',
-                      padding: '8px 14px',
+                      padding: windowWidth < 360 ? '6px 10px' : '8px 14px',
                       fontWeight: 600,
                       borderRadius: 8,
-                      fontSize: 13,
+                      fontSize: windowWidth < 360 ? 11 : 13,
                       cursor: 'pointer',
                       boxShadow: '0 2px 6px rgba(20,83,45,0.35)',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 6,
-                      textDecoration: 'none'
+                      gap: windowWidth < 360 ? 3 : 6,
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap'
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                      <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                    </svg>
-                    Exportar Excel
+                    {windowWidth < 360 ? null : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                      </svg>
+                    )}
+                    {windowWidth < 360 ? 'Excel' : 'Exportar Excel'}
                   </a>
                 </div>
               </div>
@@ -1444,19 +1450,23 @@ const computeICForEnteYear = (ente, y) => {
             <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}>
               <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
                 {/* Header */}
-                <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 30 }}>
+                <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 360 ? '12px 16px' : 20, paddingLeft: windowWidth < 360 ? 16 : 24, display: 'flex', alignItems: windowWidth < 320 ? 'flex-start' : 'center', justifyContent: 'space-between', gap: windowWidth < 320 ? 8 : (windowWidth < 425 ? 8 : 30), flexDirection: windowWidth < 320 ? 'column' : 'row' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 360 ? 8 : 12 }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 2 }}>{selectedMonth}</div>
-                      <div style={{ opacity: 0.9, fontSize: 13 }}>Año {year}</div>
+                      <div style={{ fontWeight: 700, fontSize: windowWidth < 360 ? 16 : 20, marginBottom: 2 }}>{selectedMonth}</div>
+                      <div style={{ opacity: 0.9, fontSize: windowWidth < 360 ? 11 : 13 }}>Año {year}</div>
                     </div>
-                    {/* Search and Filter Inputs */}
+                  </div>
+
+                  {/* Search and Filter Inputs - Desktop */}
+                  {windowWidth >= 624 && (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input
                         type="text"
                         placeholder="Buscar por nombre"
-                        value={modalNameQuery}
+                        value={modalNameQuery || ''}
                         onChange={e => setModalNameQuery(e.target.value)}
+                        onInput={e => setModalNameQuery(e.currentTarget.value)}
                         style={{
                           borderRadius: 6,
                           border: '1px solid #dee2e6',
@@ -1469,7 +1479,7 @@ const computeICForEnteYear = (ente, y) => {
                         }}
                       />
                       <select
-                        value={modalClassFilter}
+                        value={modalClassFilter || 'Todos'}
                         onChange={e => setModalClassFilter(e.target.value)}
                         style={{
                           borderRadius: 6,
@@ -1491,16 +1501,58 @@ const computeICForEnteYear = (ente, y) => {
                         })()}
                       </select>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Search and Filter Inputs - Mobile */}
+                  {windowWidth <= 624 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth < 360 ? 4 : 6, width: windowWidth < 320 ? '100%' : 'auto', minWidth: windowWidth < 320 ? 'auto' : (windowWidth < 360 ? 140 : 180) }}>
+                      <input
+                        type="text"
+                        placeholder="Buscar por nombre"
+                        value={modalNameQuery}
+                        onChange={e => setModalNameQuery(e.target.value)}
+                        style={{
+                          borderRadius: 6,
+                          border: '1px solid #dee2e6',
+                          background: '#440D1E',
+                          color: '#fff',
+                          padding: windowWidth < 360 ? '4px 8px' : '6px 10px',
+                          outline: 'none',
+                          fontSize: windowWidth < 360 ? 11 : 12
+                        }}
+                      />
+                      <select
+                        value={modalClassFilter}
+                        onChange={e => setModalClassFilter(e.target.value)}
+                        style={{
+                          borderRadius: 6,
+                          border: '1px solid #dee2e6',
+                          background: '#440D1E',
+                          color: '#fff',
+                          padding: windowWidth < 360 ? '4px 8px' : '6px 10px',
+                          outline: 'none',
+                          fontSize: windowWidth < 360 ? 11 : 12,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="Todos">Todas las clasificaciones</option>
+                        {(() => {
+                          const allEntities = getEntitiesForMonth(selectedMonth) || [];
+                          const classifications = Array.from(new Set(allEntities.map(a => a.classification).filter(Boolean)));
+                          return classifications.map((c, i) => (<option key={i} value={c}>{c}</option>));
+                        })()}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* Body */}
-                <div style={{ padding: 20, background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)', overflowY: 'auto', display: 'flex', gap: 20, flex: 1 }}>
-                  {/* Donut Chart - Larger */}
-                  <div style={{ width: 400, flexShrink: 0, position: 'sticky', top: 0, alignSelf: 'flex-start' }}>
-                    <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: windowWidth < 360 ? 12 : 20, background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)', overflowY: 'auto', display: 'flex', gap: windowWidth < 42 ? 12 : 20, flex: 1, flexDirection: windowWidth < 768 ? 'column' : 'row' }}>
+                  {/* Donut Chart - Responsive */}
+                  <div style={{ width: windowWidth < 768 ? '100%' : 400, flexShrink: 0, position: windowWidth < 768 ? 'static' : 'sticky', top: 0, alignSelf: windowWidth < 768 ? 'auto' : 'flex-start' }}>
+                    <div style={{ background: '#fff', borderRadius: 12, padding: windowWidth < 360 ? 12 : 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: 10, paddingBottom: 10 }}>
-                        <ResponsiveContainer width={380} height={320}>
+                        <ResponsiveContainer width={windowWidth < 360 ? '100%' : (windowWidth < 480 ? 280 : 380)} height={windowWidth < 360 ? 250 : (windowWidth < 480 ? 280 : 320)}>
                           <PieChart>
                             <Pie
                               data={(() => {
@@ -1525,8 +1577,8 @@ const computeICForEnteYear = (ente, y) => {
                               })()}
                               dataKey="value"
                               nameKey="name"
-                              innerRadius={70}
-                              outerRadius={110}
+                              innerRadius={windowWidth < 360 ? 40 : (windowWidth < 480 ? 50 : 70)}
+                              outerRadius={windowWidth < 360 ? 65 : (windowWidth < 480 ? 85 : 110)}
                               paddingAngle={2}
                               isAnimationActive={true}
                               onAnimationEnd={() => handlePieAnimationEnd(selectedMonth)}
@@ -1632,8 +1684,8 @@ const computeICForEnteYear = (ente, y) => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                  <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ padding: windowWidth < 360 ? 8 : 12, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: windowWidth < 360 ? 3 : 6, flexWrap: 'wrap' }}>
                     <a
                       href="#"
                       onClick={(e) => { e.preventDefault(); handleExportPDFMonth(); }}
@@ -1641,26 +1693,29 @@ const computeICForEnteYear = (ente, y) => {
                         background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '10px 20px',
+                        padding: windowWidth < 360 ? '4px 8px' : (windowWidth < 480 ? '6px 10px' : '10px 20px'),
                         fontWeight: 600,
-                        borderRadius: 8,
-                        fontSize: 14,
+                        borderRadius: 6,
+                        fontSize: windowWidth < 360 ? 10 : (windowWidth < 480 ? 11 : 14),
                         cursor: 'pointer',
                         boxShadow: '0 2px 6px rgba(220,53,69,0.35)',
                         transition: 'all 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
-                        textDecoration: 'none'
+                        gap: windowWidth < 360 ? 2 : (windowWidth < 480 ? 3 : 8),
+                        textDecoration: 'none',
+                        whiteSpace: 'nowrap'
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                      </svg>
-                      Exportar PDF
+                      {windowWidth < 360 ? null : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 480 ? 12 : 16} height={windowWidth < 480 ? 12 : 16} fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                        </svg>
+                      )}
+                      {windowWidth < 360 ? 'PDF' : 'Exportar PDF'}
                     </a>
                     <a
                       href="#"
@@ -1669,26 +1724,29 @@ const computeICForEnteYear = (ente, y) => {
                         background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '10px 20px',
+                        padding: windowWidth < 360 ? '4px 8px' : (windowWidth < 480 ? '6px 10px' : '10px 20px'),
                         fontWeight: 600,
-                        borderRadius: 8,
-                        fontSize: 14,
+                        borderRadius: 6,
+                        fontSize: windowWidth < 360 ? 10 : (windowWidth < 480 ? 11 : 14),
                         cursor: 'pointer',
                         boxShadow: '0 2px 6px rgba(20,83,45,0.35)',
                         transition: 'all 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 8,
-                        textDecoration: 'none'
+                        gap: windowWidth < 360 ? 2 : (windowWidth < 480 ? 3 : 8),
+                        textDecoration: 'none',
+                        whiteSpace: 'nowrap'
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                      </svg>
-                      Exportar Excel
+                      {windowWidth < 360 ? null : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 480 ? 12 : 16} height={windowWidth < 480 ? 12 : 16} fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                        </svg>
+                      )}
+                      {windowWidth < 360 ? 'Excel' : 'Exportar Excel'}
                     </a>
                   </div>
                   <button
@@ -1733,9 +1791,8 @@ const computeICForEnteYear = (ente, y) => {
 
                 <div>
                   <label className="form-label mb-2" style={{ fontWeight: 500, color: '#495057', fontSize: 14 }}>Mes</label>
-                  <select className="form-select" value={generalMonthSelection} onChange={e => setGeneralMonthSelection(e.target.value)} style={{ borderRadius: '8px', padding: '12px 18px', fontSize: 15, minWidth: 180 }}>
-                    <option value="Todos">Todos</option>
-                    {generalMonthsWithData.map(m => (<option key={m} value={m}>{m}</option>))}
+                  <select className="form-select" value={month} onChange={e => setMonth(e.target.value)} style={{ borderRadius: '8px', padding: '12px 18px', fontSize: 15, minWidth: 180 }}>
+                    {months.map(m => (<option key={m} value={m}>{m}</option>))}
                   </select>
                 </div>
               </div>
@@ -1806,7 +1863,7 @@ const computeICForEnteYear = (ente, y) => {
                 <tr>
                   <th style={{ minWidth: 220 }}>Ente</th>
                   { /* columnas: meses (según selección) -- usar abreviaturas y menos padding */ }
-                  {(generalMonthSelection === 'Todos' ? generalMonthsWithData : [generalMonthSelection]).map(m => (
+                  {(month === 'Todos' ? monthsWithData : [month]).filter(Boolean).map(m => (
                     <th key={m} className="text-center" style={{ paddingLeft: 8, paddingRight: 8 }}>{monthAbbr[m] || m.slice(0,3)}</th>
                   ))}
                   {/* Columna IC al final */}
@@ -1814,7 +1871,7 @@ const computeICForEnteYear = (ente, y) => {
                 </tr>
               </thead>
               {(() => {
-                const monthsToShow = (generalMonthSelection === 'Todos' ? generalMonthsWithData : [generalMonthSelection]).filter(Boolean);
+                const monthsToShow = (month === 'Todos' ? monthsWithData : [month]).filter(Boolean);
                 if (monthsToShow.length === 0) return <tbody />;
 
                 // preparar datos agregados para fila IC

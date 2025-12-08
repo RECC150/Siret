@@ -225,13 +225,125 @@ export default function Inicio() {
       </nav>
 
       {/* Encabezado */}
-      <header className="bg-primary text-white text-center py-4">
-        <h1>Auditoría Superior del Estado de Baja California Sur</h1>
-        <p className="lead">
-          Monitoreo de Cumplimiento en la Entrega de Informes Mensuales y
-          Cuentas Públicas
+      <header style={{
+        background: 'linear-gradient(135deg, #681b32 0%, #200b07 50%, #681b32 100%)',
+        backgroundSize: '200% 200%',
+        animation: 'headerGradient 8s ease infinite',
+        color: '#fff',
+        textAlign: 'center',
+        padding: '80px 20px',
+        position: 'relative',
+        overflow: 'hidden',
+        marginTop: 0
+      }}>
+        <style>{`
+          @keyframes headerGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+
+          @keyframes fadeInDown {
+            from {
+              opacity: 0;
+              transform: translateY(-30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes slideUpBackground {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .header-title {
+            animation: fadeInDown 1s ease-out;
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 2;
+          }
+
+          .header-subtitle {
+            animation: fadeInDown 1s ease-out 0.2s forwards;
+            opacity: 0;
+            font-size: 24px;
+            font-weight: 500;
+            margin: 0;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 2;
+          }
+
+          .header-background-image {
+            animation: slideUpBackground 1.2s ease-out 0.4s forwards;
+            opacity: 0;
+            width: 100%;
+            height: auto;
+            max-height: 600px;
+            object-fit: cover;
+            object-position: center bottom;
+            display: block;
+            filter: brightness(0.95) contrast(1.05);
+          }
+
+          @media (max-width: 768px) {
+            .header-title {
+              font-size: 32px;
+            }
+            .header-subtitle {
+              font-size: 16px;
+            }
+            .header-background-image {
+              max-height: 420px;
+            }
+          }
+
+          @media (max-width: 480px) {
+            .header-title {
+              font-size: 24px;
+            }
+            .header-subtitle {
+              font-size: 14px;
+            }
+            .header-background-image {
+              max-height: 300px;
+            }
+          }
+        `}</style>
+        <h1 className="header-title">Auditoría Superior del Estado de Baja California Sur</h1>
+        <p className="header-subtitle">
+          Monitoreo de Cumplimiento en la Entrega de Informes Mensuales y Cuentas Públicas
         </p>
       </header>
+
+      {/* Imagen de fondo decorativa */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        overflow: 'hidden',
+        background: 'linear-gradient(135deg, #681b32 0%, #200b07 50%, #681b32 100%)',
+        backgroundSize: '200% 200%',
+        animation: 'headerGradient 8s ease infinite'
+      }}>
+        <img
+          src="http://localhost/siret/storage/app/public/ASEedificioc.png"
+          alt="Edificio ASEBCS"
+          className="header-background-image"
+          style={{ opacity: 0.75, margin: 0, display: 'block', mixBlendMode: 'overlay' }}
+        />
+      </div>
 
       <main className="container my-4">
         {/* Sección ASEBCS */}
@@ -485,7 +597,7 @@ export default function Inicio() {
                     <div className="inicio-card-title">{card.title}</div>
                     <div className="inicio-card-description">{card.description}</div>
                     <button className="inicio-card-button" onClick={() => navigate(card.path)}>
-                      Ir a {card.title}
+                      Ir a {card.title}ASEedificioc.png
                     </button>
                   </div>
                 </div>

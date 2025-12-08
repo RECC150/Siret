@@ -96,6 +96,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
 };
 
 export default function SiretExportacion(){
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [compliances, setCompliances] = useState([]);
   const [entes, setEntes] = useState([]);
   const [clasificaciones, setClasificaciones] = useState([]);
@@ -174,6 +175,14 @@ export default function SiretExportacion(){
     };
     load();
   }, [apiBase]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Cargar entes activos para todos los años disponibles
   useEffect(() => {
@@ -588,36 +597,41 @@ export default function SiretExportacion(){
         }
       `}</style>
 
-      <header className="text-white text-center py-5" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-        <h1 style={{ margin: 0, marginBottom: 8, fontWeight: 700 }}>SIRET</h1>
-        <p className="lead" style={{ margin: 0, marginBottom: 0, opacity: 0.95 }}>Sistema de Exportación de Cumplimientos</p>
+      <header className="text-white text-center" style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', padding: windowWidth < 768 ? '24px 16px' : '40px' }}>
+        <h1 style={{ margin: 0, marginBottom: 8, fontWeight: 700, fontSize: windowWidth < 768 ? 24 : 32 }}>SIRET</h1>
+        <p className="lead" style={{ margin: 0, marginBottom: 0, opacity: 0.95, fontSize: windowWidth < 768 ? 14 : 18 }}>Sistema de Exportación de Cumplimientos</p>
       </header>
 
-      <div className="container py-4">
-      <div style={{ width: '100%', marginTop: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+      <div className="container" style={{ paddingTop: windowWidth < 768 ? 12 : 16, paddingBottom: windowWidth < 768 ? 12 : 16 }}>
+      <div style={{ width: '100%', marginTop: windowWidth < 768 ? 12 : 20, marginBottom: windowWidth < 768 ? 12 : 20 }}>
+        <div style={{ display: 'flex', gap: windowWidth < 768 ? 8 : 12, padding: windowWidth < 768 ? '6px' : '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', flexDirection: 'row' }}>
           <button
             type="button"
             className="btn"
             onClick={() => setViewMode('años')}
             style={{
               flex: 1,
-              padding: '12px 20px',
+              padding: windowWidth < 768 ? '10px 12px' : '12px 20px',
               background: viewMode === 'años' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
               color: viewMode === 'años' ? '#fff' : '#681b32',
               border: viewMode === 'años' ? 'none' : '2px solid #681b32',
               borderRadius: '8px',
               fontWeight: 600,
               transition: 'all 0.3s ease',
-              boxShadow: viewMode === 'años' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+              boxShadow: viewMode === 'años' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none',
+              fontSize: windowWidth < 768 ? 13 : 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: windowWidth < 480 ? 0 : (windowWidth < 768 ? 4 : 8)
             }}
             aria-pressed={viewMode === 'años'}
             title="Mostrar años"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 14 : 16} height={windowWidth < 768 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: windowWidth < 480 ? 0 : (windowWidth < 768 ? 4 : 8), verticalAlign: 'middle' }}>
               <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
             </svg>
-            Años
+            {windowWidth < 480 ? '' : 'Años'}
           </button>
 
           <button
@@ -626,22 +640,27 @@ export default function SiretExportacion(){
             onClick={() => setViewMode('entes')}
             style={{
               flex: 1,
-              padding: '12px 20px',
+              padding: windowWidth < 768 ? '10px 12px' : '12px 20px',
               background: viewMode === 'entes' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
               color: viewMode === 'entes' ? '#fff' : '#681b32',
               border: viewMode === 'entes' ? 'none' : '2px solid #681b32',
               borderRadius: '8px',
               fontWeight: 600,
               transition: 'all 0.3s ease',
-              boxShadow: viewMode === 'entes' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+              boxShadow: viewMode === 'entes' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none',
+              fontSize: windowWidth < 768 ? 13 : 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: windowWidth < 480 ? 0 : (windowWidth < 768 ? 4 : 8)
             }}
             aria-pressed={viewMode === 'entes'}
             title="Ver entes"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 14 : 16} height={windowWidth < 768 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: windowWidth < 480 ? 0 : (windowWidth < 768 ? 4 : 8), verticalAlign: 'middle' }}>
               <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7Zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-5.784 6A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216ZM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
             </svg>
-            Entes
+            {windowWidth < 480 ? '' : 'Entes'}
           </button>
 
           <button
@@ -650,28 +669,33 @@ export default function SiretExportacion(){
             onClick={() => setViewMode('comparativa')}
             style={{
               flex: 1,
-              padding: '12px 20px',
+              padding: windowWidth < 768 ? '10px 12px' : '12px 20px',
               background: viewMode === 'comparativa' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
               color: viewMode === 'comparativa' ? '#fff' : '#681b32',
               border: viewMode === 'comparativa' ? 'none' : '2px solid #681b32',
               borderRadius: '8px',
               fontWeight: 600,
               transition: 'all 0.3s ease',
-              boxShadow: viewMode === 'comparativa' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+              boxShadow: viewMode === 'comparativa' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none',
+              fontSize: windowWidth < 768 ? 13 : 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: windowWidth < 480 ? 0 : (windowWidth < 768 ? 4 : 8)
             }}
             aria-pressed={viewMode === 'comparativa'}
             title="Comparativa"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 14 : 16} height={windowWidth < 768 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16" style={{ verticalAlign: 'middle' }}>
               <path d="M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-7zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2z"/>
             </svg>
-            Comparativa
+            {windowWidth < 480 ? '' : 'Comparativa'}
           </button>
         </div>
       </div>
 
       {viewMode === 'años' && (
-      <section id="exportacion" style={{ marginTop: 16, marginBottom: 32 }}>
+      <section id="exportacion" style={{ marginTop: windowWidth < 768 ? 12 : 16, marginBottom: windowWidth < 768 ? 20 : 32 }}>
         <hr className="linea mb-4" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ fontWeight: 700, color: '#681b32', margin: 0 }}>Exportación</h2>
@@ -707,48 +731,50 @@ export default function SiretExportacion(){
                   background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                   color: '#fff',
                   fontWeight: 600,
-                  padding: '14px 18px',
+                  padding: windowWidth < 768 ? '10px 12px' : '14px 18px',
                   borderRadius: '10px',
                   boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: windowWidth < 768 ? 'flex-start' : 'space-between',
                   border: 'none',
                   transition: 'all 0.2s ease',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  flexDirection: windowWidth < 768 ? 'column' : 'row',
+                  gap: windowWidth < 768 ? 8 : 0
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 768 ? 8 : 12, width: windowWidth < 768 ? '100%' : 'auto' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 16 : 20} height={windowWidth < 768 ? 16 : 20} fill="currentColor" viewBox="0 0 16 16">
                     <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
                   </svg>
-                  Año {year}
+                  <span style={{ fontSize: windowWidth < 768 ? 14 : 16 }}>Año {year}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 768 ? 6 : 8, flexWrap: 'wrap', justifyContent: windowWidth < 768 ? 'flex-start' : 'flex-end', width: windowWidth < 768 ? '100%' : 'auto' }}>
                   {completedYears.has(year) && (
                     <span style={{
                       background: '#198754',
-                      padding: '4px 12px',
+                      padding: windowWidth < 768 ? '3px 8px' : '4px 12px',
                       borderRadius: 20,
-                      fontSize: 12,
+                      fontSize: windowWidth < 768 ? 10 : 12,
                       fontWeight: 700,
                       letterSpacing: '0.5px'
                     }}>COMPLETADO</span>
                   )}
                   <span style={{
                     background: 'rgba(255,255,255,0.2)',
-                    padding: '4px 12px',
+                    padding: windowWidth < 768 ? '3px 8px' : '4px 12px',
                     borderRadius: 20,
-                    fontSize: 13,
+                    fontSize: windowWidth < 768 ? 11 : 13,
                     fontWeight: 600
                   }}>
                     {monthCount}/12
                   </span>
                   <span style={{
                     background: 'rgba(255,255,255,0.25)',
-                    padding: '4px 10px',
+                    padding: windowWidth < 768 ? '3px 8px' : '4px 10px',
                     borderRadius: 20,
-                    fontSize: 12,
+                    fontSize: windowWidth < 768 ? 10 : 12,
                     fontWeight: 600
                   }}>
                     {(() => {
@@ -789,7 +815,7 @@ export default function SiretExportacion(){
                               <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
                             </svg>
                             Meses disponibles
-                            {(() => {
+                            {windowWidth >= 768 && (() => {
                               const stats = calculateYearStats(year);
                               return (
                                 <span style={{ display: 'flex', gap: 6, marginLeft: 12, fontSize: 12 }}>
@@ -806,7 +832,7 @@ export default function SiretExportacion(){
                               );
                             })()}
                           </h6>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: windowWidth < 768 ? 6 : 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: windowWidth < 768 ? 'flex-start' : 'flex-end' }}>
                             <a
                               href={`/SiretExportPDF?year=${encodeURIComponent(year)}`}
                               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
@@ -815,20 +841,20 @@ export default function SiretExportacion(){
                                 background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                                 color: '#fff',
                                 border: 'none',
-                                padding: '8px 16px',
+                                padding: windowWidth < 768 ? '6px 10px' : '8px 16px',
                                 borderRadius: 8,
                                 fontWeight: 600,
-                                fontSize: 13,
+                                fontSize: windowWidth < 768 ? 11 : 13,
                                 cursor: 'pointer',
                                 boxShadow: '0 2px 6px rgba(220,53,69,0.35)',
                                 transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 6,
+                                gap: windowWidth < 768 ? 4 : 6,
                                 textDecoration: 'none'
                               }}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                              <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 12 : 14} height={windowWidth < 768 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                               </svg>
@@ -842,20 +868,20 @@ export default function SiretExportacion(){
                                 background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                                 color: '#fff',
                                 border: 'none',
-                                padding: '8px 16px',
+                                padding: windowWidth < 768 ? '6px 10px' : '8px 16px',
                                 borderRadius: 8,
                                 fontWeight: 600,
-                                fontSize: 13,
+                                fontSize: windowWidth < 768 ? 11 : 13,
                                 cursor: 'pointer',
                                 boxShadow: '0 2px 6px rgba(20,83,45,0.35)',
                                 transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 6,
+                                gap: windowWidth < 768 ? 4 : 6,
                                 textDecoration: 'none'
                               }}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                              <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 12 : 14} height={windowWidth < 768 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                               </svg>
@@ -869,21 +895,21 @@ export default function SiretExportacion(){
                                 background: '#ffffff',
                                 color: '#000000',
                                 border: '1px solid #d0d0d0',
-                                padding: '8px 16px',
+                                padding: windowWidth < 768 ? '6px 10px' : '8px 16px',
                                 borderRadius: 8,
                                 fontWeight: 600,
-                                fontSize: 13,
+                                fontSize: windowWidth < 768 ? 11 : 13,
                                 cursor: 'pointer',
                                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
                                 transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 6,
+                                gap: windowWidth < 768 ? 4 : 6,
                                 textDecoration: 'none'
                               }}
                               title={`Exportar año ${year}`}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                              <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 12 : 14} height={windowWidth < 768 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                               </svg>
@@ -892,24 +918,24 @@ export default function SiretExportacion(){
                           </div>
                         </div>
                         {displayMonths.length === 0 ? (
-                          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6c757d' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16" style={{ opacity: 0.3, marginBottom: 12 }}>
+                          <div style={{ padding: windowWidth < 768 ? '30px 16px' : '40px 20px', textAlign: 'center', color: '#6c757d' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 40 : 48} height={windowWidth < 768 ? 40 : 48} fill="currentColor" viewBox="0 0 16 16" style={{ opacity: 0.3, marginBottom: 12 }}>
                               <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
                             </svg>
-                            <p style={{ margin: 0, fontSize: 14 }}>No hay meses agregados aún.</p>
+                            <p style={{ margin: 0, fontSize: windowWidth < 768 ? 12 : 14 }}>No hay meses agregados aún.</p>
                           </div>
                         ) : (
-                          <div className="row g-3">
+                          <div className="row g-2 g-md-3">
                             {displayMonths.map((mes) => (
-                              <div className="col-6 col-md-3" key={mes}>
+                              <div className={windowWidth < 768 ? "col-6" : "col-md-3"} key={mes}>
                                 <div className="month-chip" style={{
                                     background: '#fff',
                                     border: '2px solid #e9ecef',
                                     borderRadius: 10,
-                                    padding: '12px 10px',
+                                    padding: windowWidth < 768 ? '10px 8px' : '12px 10px',
                                     textAlign: 'center',
                                     fontWeight: 600,
-                                    fontSize: 14,
+                                    fontSize: windowWidth < 768 ? 12 : 14,
                                     color: '#681b32',
                                     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                                     cursor: 'pointer',
@@ -939,20 +965,20 @@ export default function SiretExportacion(){
       )}
 
       {viewMode === 'entes' && (
-        <section id="entes" style={{ marginTop: 16, marginBottom: 32 }}>
+        <section id="entes" style={{ marginTop: windowWidth < 768 ? 12 : 16, marginBottom: windowWidth < 768 ? 20 : 32 }}>
           <hr className="linea mb-4" />
-          <h2 style={{ fontWeight: 700, color: '#681b32', marginBottom: 24 }}>Entes</h2>
+          <h2 style={{ fontWeight: 700, color: '#681b32', marginBottom: 24, fontSize: windowWidth < 768 ? 22 : 28 }}>Entes</h2>
           <div className="card mb-3" style={{ border: 'none', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <div className="card-body" style={{ padding: '24px' }}>
-              <h6 style={{ marginBottom: 16, color: '#681b32', fontWeight: 600, fontSize: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+            <div className="card-body" style={{ padding: windowWidth < 768 ? '16px' : '24px' }}>
+              <h6 style={{ marginBottom: 16, color: '#681b32', fontWeight: 600, fontSize: windowWidth < 768 ? 14 : 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 16 : 20} height={windowWidth < 768 ? 16 : 20} fill="currentColor" viewBox="0 0 16 16">
                   <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
                 </svg>
                 Filtros de búsqueda
               </h6>
               <div className="row g-3 align-items-end">
-                <div className="col-md-6">
-                  <label htmlFor="entes-search" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Ente</label>
+                <div className={windowWidth < 768 ? "col-12" : "col-md-6"}>
+                  <label htmlFor="entes-search" className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: windowWidth < 768 ? 13 : 14 }}>Ente</label>
                   <input
                     id="entes-search"
                     list="entes-search-list"
@@ -961,19 +987,19 @@ export default function SiretExportacion(){
                     placeholder="Buscar ente"
                     value={entesSearch}
                     onChange={(e)=>setEntesSearch(e.target.value)}
-                    style={{ borderRadius: '8px', padding: '10px 14px' }}
+                    style={{ borderRadius: '8px', padding: windowWidth < 768 ? '8px 10px' : '10px 14px', fontSize: windowWidth < 768 ? 13 : 14 }}
                   />
                   <datalist id="entes-search-list">
                     {(entes||[]).map((e,i)=>(<option key={i} value={e.title}/>))}
                   </datalist>
                 </div>
-                <div className="col-md-6">
-                  <label className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación</label>
+                <div className={windowWidth < 768 ? "col-12" : "col-md-6"}>
+                  <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: windowWidth < 768 ? 13 : 14 }}>Clasificación</label>
                   <select
                     className="form-select"
                     value={entesClasifFilter}
                     onChange={e=>setEntesClasifFilter(e.target.value)}
-                    style={{ borderRadius: '8px', padding: '10px 14px' }}
+                    style={{ borderRadius: '8px', padding: windowWidth < 768 ? '8px 10px' : '10px 14px', fontSize: windowWidth < 768 ? 13 : 14 }}
                   >
                     <option value="Todos">Todas las clasificaciones</option>
                     {clasificaciones.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
@@ -1003,20 +1029,20 @@ export default function SiretExportacion(){
               return (
                 <div className="list-group">
                   {list.map(e => (
-                    <div key={e.id} className="list-group-item list-group-item-action d-flex align-items-center">
-                      <div style={{ width: 96, height: 96, flex: '0 0 96px' }} className="me-3 d-flex align-items-center justify-content-center">
-                        <img src={e.img || ASEBCS} alt={e.title} style={{ maxWidth: '88px', maxHeight: '88px', objectFit: 'contain' }} />
+                    <div key={e.id} className="list-group-item list-group-item-action d-flex align-items-center" style={{ flexDirection: windowWidth < 768 ? 'column' : 'row', textAlign: windowWidth < 768 ? 'center' : 'left', padding: windowWidth < 768 ? '16px' : '12px' }}>
+                      <div style={{ width: windowWidth < 768 ? 80 : 96, height: windowWidth < 768 ? 80 : 96, flex: windowWidth < 768 ? '0 0 80px' : '0 0 96px', marginBottom: windowWidth < 768 ? 12 : 0, marginRight: windowWidth < 768 ? 0 : 12 }} className="d-flex align-items-center justify-content-center">
+                        <img src={e.img || ASEBCS} alt={e.title} style={{ maxWidth: windowWidth < 768 ? '72px' : '88px', maxHeight: windowWidth < 768 ? '72px' : '88px', objectFit: 'contain' }} />
                       </div>
-                      <div className="flex-grow-1">
-                        <h5 className="mb-1" style={{ margin: 0 }}>{e.title}</h5>
+                      <div className="flex-grow-1" style={{ width: windowWidth < 768 ? '100%' : 'auto' }}>
+                        <h5 className="mb-1" style={{ margin: 0, fontSize: windowWidth < 768 ? 16 : 18, fontWeight: 600 }}>{e.title}</h5>
                         <p className="mb-1" style={{ marginTop: 4 }}>
-                          <small className="text-white px-2 py-1 rounded" style={{ background: 'linear-gradient(to right, #681b32, #200b07)' }}>
+                          <small className="text-white px-2 py-1 rounded" style={{ background: 'linear-gradient(to right, #681b32, #200b07)', fontSize: windowWidth < 768 ? 12 : 13 }}>
                             {e.classification || 'Sin clasificación'}
                           </small>
                         </p>
                       </div>
-                      <div className="text-end" style={{ minWidth: 180 }}>
-                        <button className="btn btn-sm btn-magenta" onClick={() => openEnteModal(e)}>Ver detalle</button>
+                      <div className="text-end" style={{ minWidth: windowWidth < 768 ? 'auto' : 180, marginTop: windowWidth < 768 ? 12 : 0, width: windowWidth < 768 ? '100%' : 'auto' }}>
+                        <button className="btn btn-sm btn-magenta" onClick={() => openEnteModal(e)} style={{ fontSize: windowWidth < 768 ? 12 : 13, padding: windowWidth < 768 ? '6px 12px' : '8px 16px', width: windowWidth < 768 ? '100%' : 'auto' }}>Ver detalle</button>
                       </div>
                     </div>
                   ))}
@@ -1033,18 +1059,18 @@ export default function SiretExportacion(){
 
       {showMonthModal && (
         <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', zIndex:2500, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width:'95%', maxWidth:1100, maxHeight:'90vh', background:'#fff', borderRadius:12, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 10px 40px rgba(0,0,0,0.25)' }}>
+          <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width: windowWidth < 768 ? '100%' : '95%', maxWidth: windowWidth < 768 ? '100%' : 1100, maxHeight: windowWidth < 768 ? '95vh' : '90vh', background:'#fff', borderRadius: windowWidth < 768 ? 0 : 12, overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 768 ? 12 : 20, paddingLeft: windowWidth < 768 ? 12 : 24, display: 'flex', alignItems: windowWidth < 768 ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: windowWidth < 768 ? 'column' : 'row', gap: windowWidth < 768 ? 8 : 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 768 ? 12 : 20 }}>
                 <div>
-                  <div style={{ fontWeight:700, fontSize:20, marginBottom:2 }}>{monthModalMonth}</div>
-                  <div style={{ opacity:0.9, fontSize:13 }}>Año {monthModalYear}</div>
+                  <div style={{ fontWeight:700, fontSize: windowWidth < 768 ? 16 : 20, marginBottom:2 }}>{monthModalMonth}</div>
+                  <div style={{ opacity:0.9, fontSize: windowWidth < 768 ? 12 : 13 }}>Año {monthModalYear}</div>
                 </div>
 
 
               {/* Search and Filter Inputs */}
-              <div style={{ display:'flex', gap:8 }}>
+              <div style={{ display:'flex', gap: windowWidth < 768 ? 6 : 8, flexDirection: windowWidth < 768 ? 'column' : 'row', width: windowWidth < 768 ? '100%' : 'auto' }}>
                 <input
                     type="text"
                     placeholder="Buscar por nombre"
@@ -1055,10 +1081,11 @@ export default function SiretExportacion(){
                       border: '1px solid #dee2e6',
                       background: '#440D1E',
                       color: '#fff',
-                      padding: '9px 14px',
+                      padding: windowWidth < 768 ? '7px 10px' : '9px 14px',
                       outline: 'none',
-                      fontSize: 14,
-                      minWidth: 220
+                      fontSize: windowWidth < 768 ? 12 : 14,
+                      minWidth: windowWidth < 768 ? 'auto' : 220,
+                      width: windowWidth < 768 ? '100%' : 'auto'
                     }}
                   />
                   <select
@@ -1069,11 +1096,12 @@ export default function SiretExportacion(){
                       border: '1px solid #dee2e6',
                       background: '#440D1E',
                       color: '#fff',
-                      padding: '9px 14px',
+                      padding: windowWidth < 768 ? '7px 10px' : '9px 14px',
                       outline: 'none',
-                      fontSize: 14,
-                      minWidth: 200,
-                      cursor: 'pointer'
+                      fontSize: windowWidth < 768 ? 12 : 14,
+                      minWidth: windowWidth < 768 ? 'auto' : 200,
+                      cursor: 'pointer',
+                      width: windowWidth < 768 ? '100%' : 'auto'
                     }}
                   >
                     <option value="Todos">Todas las clasificaciones</option>
@@ -1085,10 +1113,10 @@ export default function SiretExportacion(){
             </div>
             </div>
             {/* Body */}
-            <div style={{ padding:20, background:'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)', overflowY:'auto', display:'flex', gap:20 }}>
+            <div style={{ padding: windowWidth < 768 ? 12 : 20, background:'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)', overflowY:'auto', display:'flex', gap: windowWidth < 768 ? 12 : 20, flexDirection: windowWidth < 768 ? 'column' : 'row' }}>
               {/* Donut Chart */}
-              <div style={{ width:300, flexShrink:0, position:'sticky', top:20, alignSelf:'flex-start' }}>
-                <div style={{ background:'#fff', borderRadius:12, padding:20, boxShadow:'0 2px 8px rgba(0,0,0,0.08)', display:'flex', flexDirection:'column' }}>
+              <div style={{ width: windowWidth < 768 ? '100%' : 300, flexShrink:0, position: windowWidth < 768 ? 'relative' : 'sticky', top: windowWidth < 768 ? 'auto' : 20, alignSelf:'flex-start' }}>
+                <div style={{ background:'#fff', borderRadius:12, padding: windowWidth < 768 ? 16 : 20, boxShadow:'0 2px 8px rgba(0,0,0,0.08)', display:'flex', flexDirection:'column' }}>
                   {(() => {
                     const s = calculateMonthStatsFiltered(monthModalYear, monthModalMonth, monthModalSearchName, monthModalClasif);
                     const total = parseInt(s.total);
@@ -1096,9 +1124,9 @@ export default function SiretExportacion(){
                     const amarillo = parseFloat(s.parcial);
                     const rojo = parseFloat(s.no);
 
-                    // Calculate SVG donut segments
-                    const size = 200;
-                    const strokeWidth = 38;
+                    // Calculate SVG donut segments - responsive size
+                    const size = windowWidth < 480 ? 140 : (windowWidth < 768 ? 160 : 200);
+                    const strokeWidth = windowWidth < 480 ? 28 : (windowWidth < 768 ? 32 : 38);
                     const radius = (size - strokeWidth) / 2;
                     const circumference = 2 * Math.PI * radius;
 
@@ -1111,8 +1139,8 @@ export default function SiretExportacion(){
 
                     return (
                       <>
-                        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', paddingTop:10, paddingBottom:10 }}>
-                          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                        <div style={{ display:'flex', justifyContent:'center', alignItems:'center', paddingTop: windowWidth < 480 ? 8 : 10, paddingBottom: windowWidth < 480 ? 8 : 10 }}>
+                          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ maxWidth: '100%', height: 'auto' }}>
                             <g transform={`rotate(-90 ${size/2} ${size/2})`}>
                               {/* Background circle */}
                               <circle
@@ -1169,18 +1197,18 @@ export default function SiretExportacion(){
                           </svg>
                         </div>
                         {/* Legend at bottom left */}
-                        <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:16 }}>
-                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                            <div style={{ width:16, height:16, borderRadius:4, background:'#28a745' }} />
-                            <span style={{ fontSize:12, fontWeight:600, color:'#495057' }}>Cumplió: {verde.toFixed(1)}%</span>
+                        <div style={{ display:'flex', flexDirection:'column', gap: windowWidth < 480 ? 6 : 8, marginTop: windowWidth < 480 ? 12 : 16 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap: windowWidth < 480 ? 6 : 8 }}>
+                            <div style={{ width: windowWidth < 480 ? 12 : 16, height: windowWidth < 480 ? 12 : 16, borderRadius:4, background:'#28a745', flexShrink: 0 }} />
+                            <span style={{ fontSize: windowWidth < 480 ? 11 : 12, fontWeight:600, color:'#495057' }}>Cumplió: {verde.toFixed(1)}%</span>
                           </div>
-                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                            <div style={{ width:16, height:16, borderRadius:4, background:'#ffc107' }} />
-                            <span style={{ fontSize:12, fontWeight:600, color:'#495057' }}>No cumplió: {amarillo.toFixed(1)}%</span>
+                          <div style={{ display:'flex', alignItems:'center', gap: windowWidth < 480 ? 6 : 8 }}>
+                            <div style={{ width: windowWidth < 480 ? 12 : 16, height: windowWidth < 480 ? 12 : 16, borderRadius:4, background:'#ffc107', flexShrink: 0 }} />
+                            <span style={{ fontSize: windowWidth < 480 ? 11 : 12, fontWeight:600, color:'#495057' }}>No cumplió: {amarillo.toFixed(1)}%</span>
                           </div>
-                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                            <div style={{ width:16, height:16, borderRadius:4, background:'#dc3545' }} />
-                            <span style={{ fontSize:12, fontWeight:600, color:'#495057' }}>No presentó: {rojo.toFixed(1)}%</span>
+                          <div style={{ display:'flex', alignItems:'center', gap: windowWidth < 480 ? 6 : 8 }}>
+                            <div style={{ width: windowWidth < 480 ? 12 : 16, height: windowWidth < 480 ? 12 : 16, borderRadius:4, background:'#dc3545', flexShrink: 0 }} />
+                            <span style={{ fontSize: windowWidth < 480 ? 11 : 12, fontWeight:600, color:'#495057' }}>No presentó: {rojo.toFixed(1)}%</span>
                           </div>
                         </div>
                       </>
@@ -1261,34 +1289,34 @@ export default function SiretExportacion(){
             </div>
 
             {/* Footer */}
-            <div style={{ padding:16, background:'#f8f9fa', borderTop:'1px solid #e9ecef', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div style={{ display:'flex', gap:10 }}>
+            <div style={{ padding: windowWidth < 768 ? 12 : 16, background:'#f8f9fa', borderTop:'1px solid #e9ecef', display:'flex', justifyContent:'space-between', alignItems:'center', gap: windowWidth < 768 ? 6 : 10, flexWrap: 'wrap' }}>
+              <div style={{ display:'flex', gap: windowWidth < 768 ? 6 : 10, flexWrap: 'wrap' }}>
                 <a
                   href={`/SiretExportPDFMes?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}&q=${encodeURIComponent(monthModalSearchName)}&clasif=${encodeURIComponent(monthModalClasif || '')}&enteIds=${encodeURIComponent(filteredMonthEnteIds.join('-'))}`}
                   style={{
                     background:'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                     color:'#fff',
                     border:'none',
-                    padding:'10px 20px',
+                    padding: windowWidth < 768 ? '8px 10px' : '10px 20px',
                     fontWeight:600,
                     borderRadius:8,
-                    fontSize:14,
+                    fontSize: windowWidth < 768 ? 12 : 14,
                     cursor:'pointer',
                     boxShadow:'0 2px 6px rgba(220,53,69,0.35)',
                     transition:'all 0.2s ease',
                     display:'flex',
                     alignItems:'center',
-                    gap:8,
+                    gap: windowWidth < 480 ? 4 : 8,
                     textDecoration:'none'
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 14 : 16} height={windowWidth < 768 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                     <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                   </svg>
-                  Exportar PDF
+                  {windowWidth < 480 ? '' : 'Exportar PDF'}
                 </a>
                 <a
                   href={`/SiretExportExcelMes?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}&q=${encodeURIComponent(monthModalSearchName)}&clasif=${encodeURIComponent(monthModalClasif || '')}&enteIds=${encodeURIComponent(filteredMonthEnteIds.join('-'))}`}
@@ -1296,26 +1324,26 @@ export default function SiretExportacion(){
                     background:'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                     color:'#fff',
                     border:'none',
-                    padding:'10px 20px',
+                    padding: windowWidth < 768 ? '8px 10px' : '10px 20px',
                     fontWeight:600,
                     borderRadius:8,
-                    fontSize:14,
+                    fontSize: windowWidth < 768 ? 12 : 14,
                     cursor:'pointer',
                     boxShadow:'0 2px 6px rgba(20,83,45,0.35)',
                     transition:'all 0.2s ease',
                     display:'flex',
                     alignItems:'center',
-                    gap:8,
+                    gap: windowWidth < 480 ? 4 : 8,
                     textDecoration:'none'
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 14 : 16} height={windowWidth < 768 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16">
                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                     <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
                   </svg>
-                  Exportar Excel
+                  {windowWidth < 480 ? '' : 'Exportar Excel'}
                 </a>
               </div>
               <button
@@ -1325,9 +1353,10 @@ export default function SiretExportacion(){
                   background:'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                   color:'#fff',
                   border:'none',
-                  padding:'10px 24px',
+                  padding: windowWidth < 768 ? '8px 16px' : '10px 24px',
                   fontWeight:600,
                   borderRadius:8,
+                  fontSize: windowWidth < 768 ? 13 : 14,
                   boxShadow:'0 2px 6px rgba(104, 27, 50, 0.3)',
                   transition:'all 0.2s ease',
                   cursor:'pointer'
@@ -1343,13 +1372,15 @@ export default function SiretExportacion(){
       )}
 
       {selectedEnte && (
-        <div className={`modal-backdrop${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600 }}>
-          <div className={`modal-content${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
-            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, flexShrink: 0 }}>
+        <div className={`modal-backdrop${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600, padding: windowWidth < 768 ? 8 : 0 }}>
+          <div className={`modal-content${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} style={{ width: windowWidth < 768 ? '100%' : '95%', maxWidth: windowWidth < 768 ? '100%' : 1100, maxHeight: windowWidth < 768 ? '95vh' : '90vh', background: '#fff', borderRadius: windowWidth < 768 ? 0 : 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
+            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 768 ? '12px 16px' : 20, paddingLeft: windowWidth < 768 ? 16 : 24, flexShrink: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
-                  <h5 style={{ margin: 0, fontWeight: 700, fontSize: 20 }}>{selectedEnte.title}</h5>
-                  <div style={{ opacity: 0.9, fontSize: 13, marginTop: 2 }}>{selectedEnte.classification || 'Sin clasificación'}</div>
+                  <h5 style={{ margin: 0, fontWeight: 700, fontSize: windowWidth < 768 ? 16 : 20 }}>{selectedEnte.title}</h5>
+                  {windowWidth >= 768 && (
+                    <div style={{ opacity: 0.9, fontSize: 13, marginTop: 2 }}>{selectedEnte.classification || 'Sin clasificación'}</div>
+                  )}
                 </div>
               </div>
 
@@ -1380,9 +1411,11 @@ export default function SiretExportacion(){
                     Gráficas
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginLeft: 8 }}>
-                  <small style={{ opacity: 0.9 }}>IC = (Número de meses que cumplió / Número de meses transcurridos) * 100</small>
-                </div>
+                {windowWidth >= 768 && (
+                  <div style={{ display: 'flex', alignItems: 'center', marginLeft: 8 }}>
+                    <small style={{ opacity: 0.9 }}>IC = (Número de meses que cumplió / Número de meses transcurridos) * 100</small>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1610,9 +1643,9 @@ export default function SiretExportacion(){
             )}
             </div>
 
-            <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ padding: windowWidth < 480 ? 12 : 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 8, flexWrap: windowWidth < 480 ? 'wrap' : 'nowrap' }}>
               {selectedEnte && (
-                <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: windowWidth < 480 ? 6 : 10, flexWrap: 'wrap' }}>
                   {(() => {
                     const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]).map(y => parseInt(y, 10)).sort((a, b) => b - a);
                     const yearsParam = yearsSelected.join('-');
@@ -1625,29 +1658,32 @@ export default function SiretExportacion(){
                             background:'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                             color:'#fff',
                             border:'none',
-                            padding:'8px 14px',
+                            padding: windowWidth < 480 ? '6px 10px' : '8px 14px',
                             fontWeight:600,
                             borderRadius:8,
-                            fontSize:13,
+                            fontSize: windowWidth < 480 ? 11 : 13,
                             cursor:'pointer',
                             boxShadow:'0 2px 6px rgba(220,53,69,0.35)',
                             transition:'all 0.2s ease',
                             display:'flex',
                             alignItems:'center',
-                            gap:6,
+                            gap: windowWidth < 480 ? 3 : 6,
                             textDecoration:'none',
                             pointerEvents: canExport ? 'auto' : 'none',
-                            opacity: canExport ? 1 : 0.6
+                            opacity: canExport ? 1 : 0.6,
+                            whiteSpace: 'nowrap'
                           }}
                           title={canExport ? 'Exportar PDF' : 'Seleccione al menos un año'}
                           onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                          </svg>
-                          Exportar PDF
+                          {windowWidth < 480 ? null : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                              <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                            </svg>
+                          )}
+                          {windowWidth < 480 ? 'PDF' : 'Exportar PDF'}
                         </a>
                         <a
                           href={canExport ? `/SiretExportExcelEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
@@ -1655,29 +1691,32 @@ export default function SiretExportacion(){
                             background:'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
                             color:'#fff',
                             border:'none',
-                            padding:'8px 14px',
+                            padding: windowWidth < 480 ? '6px 10px' : '8px 14px',
                             fontWeight:600,
                             borderRadius:8,
-                            fontSize:13,
+                            fontSize: windowWidth < 480 ? 11 : 13,
                             cursor:'pointer',
                             boxShadow:'0 2px 6px rgba(20,83,45,0.35)',
                             transition:'all 0.2s ease',
                             display:'flex',
                             alignItems:'center',
-                            gap:6,
+                            gap: windowWidth < 480 ? 3 : 6,
                             textDecoration:'none',
                             pointerEvents: canExport ? 'auto' : 'none',
-                            opacity: canExport ? 1 : 0.6
+                            opacity: canExport ? 1 : 0.6,
+                            whiteSpace: 'nowrap'
                           }}
                           title={canExport ? 'Exportar Excel' : 'Seleccione al menos un año'}
                           onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                          </svg>
-                          Exportar Excel
+                          {windowWidth < 480 ? null : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                              <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                            </svg>
+                          )}
+                          {windowWidth < 480 ? 'Excel' : 'Exportar Excel'}
                         </a>
                       </>
                     );
@@ -1691,12 +1730,14 @@ export default function SiretExportacion(){
                   background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                   color: '#fff',
                   border: 'none',
-                  padding: '10px 24px',
+                  padding: windowWidth < 480 ? '8px 16px' : '10px 24px',
                   fontWeight: 600,
                   borderRadius: 8,
+                  fontSize: windowWidth < 480 ? 12 : 14,
                   boxShadow: '0 2px 6px rgba(104, 27, 50, 0.3)',
                   transition: 'all 0.2s ease',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(104, 27, 50, 0.4)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(104, 27, 50, 0.3)'; }}

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cambios CumplimientosMesAnio - Visualización Responsiva</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #681b32;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #200b07;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .viewport-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .viewport-btn {
+            padding: 10px 20px;
+            border: 2px solid #681b32;
+            background: white;
+            color: #681b32;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .viewport-btn:hover {
+            background: #681b32;
+            color: white;
+        }
+
+        .viewport-btn.active {
+            background: #681b32;
+            color: white;
+        }
+
+        .preview-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .preview-header h3 {
+            color: #681b32;
+            font-size: 1.1rem;
+        }
+
+        .viewport-info {
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .entes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .ente-item {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .ente-item:active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(104, 27, 50, 0.15);
+            border-color: #681b32;
+        }
+
+        .ente-logo {
+            display: none;
+            width: 60px;
+            height: 60px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .ente-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: clamp(0.9rem, 2.2vw, 1rem);
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .classification-badge {
+            display: inline-block;
+            background: linear-gradient(to right, #681b32, #200b07);
+            color: #fff;
+            padding: 0.35rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: normal;
+            width: fit-content;
+            line-height: 1.3;
+        }
+
+        .compliances-badges {
+            display: none;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .compliance-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .compliance-badge.partial {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .compliance-badge.no {
+            background: #dc3545;
+        }
+
+        .detail-button {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .detail-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 4px rgba(104, 27, 50, 0.3);
+        }
+
+        .ente-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        /* Media query para tablet+ (481px) */
+        @media (min-width: 481px) {
+            .ente-item {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .ente-logo {
+                display: block;
+            }
+
+            .ente-name {
+                font-size: 1rem;
+            }
+
+            .classification-badge {
+                padding: 0.4rem 0.85rem;
+                font-size: 0.85rem;
+            }
+
+            .compliances-badges {
+                display: flex;
+            }
+
+            .ente-content {
+                flex-grow: 1;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .detail-button {
+                width: auto;
+                min-width: 120px;
+                padding: 0.5rem 1.25rem;
+            }
+        }
+
+        /* Media query para desktop (768px+) */
+        @media (min-width: 768px) {
+            .entes-list {
+                gap: 1.25rem;
+            }
+
+            .ente-item {
+                padding: 1.25rem;
+                gap: 1.25rem;
+            }
+
+            .ente-logo {
+                width: 70px;
+                height: 70px;
+            }
+
+            .ente-name {
+                font-size: 1.1rem;
+            }
+
+            .classification-badge {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .detail-button {
+                min-width: 140px;
+                padding: 0.6rem 1.5rem;
+                font-size: 0.95rem;
+            }
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 900px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .comparison-box {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .comparison-box h4 {
+            color: #681b32;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .comparison-box p {
+            font-size: 0.85rem;
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .comparison-box.active {
+            background: #f0f8ff;
+            border-color: #681b32;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+
+        .feature-list li {
+            padding: 5px 0;
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .feature-list li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .feature-list.hidden li:before {
+            content: "✗ ";
+            color: #dc3545;
+        }
+
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #681b32;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .info-box strong {
+            color: #681b32;
+        }
+
+        .diagram {
+            background: #f9f9f9;
+            border: 1px dashed #ccc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: #555;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Optimización CumplimientosMesAnio</h1>
+
+        <div class="info-box">
+            <strong>📱 Nota:</strong> Abre esta página en tu navegador y redimensiona la ventana o usa el selector de viewport para ver cómo se adaptan los estilos en diferentes tamaños de pantalla.
+        </div>
+
+        <div class="viewport-selector">
+            <button class="viewport-btn active" onclick="selectViewport(375)">📱 Mobile (375px)</button>
+            <button class="viewport-btn" onclick="selectViewport(425)">📱 Mobile L (425px)</button>
+            <button class="viewport-btn" onclick="selectViewport(481)">📊 Tablet Pequeño (481px)</button>
+            <button class="viewport-btn" onclick="selectViewport(768)">📊 Tablet (768px)</button>
+            <button class="viewport-btn" onclick="selectViewport(1024)">🖥️ Desktop (1024px)</button>
+        </div>
+
+        <div id="previewContainer" class="preview-container" style="max-width: 375px; margin: 0 auto;">
+            <div class="preview-header">
+                <h3>Vista Previa</h3>
+                <div class="viewport-info" id="viewportInfo">375px - Mobile</div>
+            </div>
+
+            <div class="entes-list">
+                <!-- Item 1 -->
+                <div class="ente-item">
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #681b32, #200b07); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;" class="ente-logo">E1</div>
+                    <div class="ente-content">
+                        <h5 class="ente-name">Municipalidad de San José</h5>
+                        <p class="classification-badge">Municipios y Organismos</p>
+                        <div class="compliances-badges">
+                            <span class="compliance-badge">Ene 2025</span>
+                            <span class="compliance-badge">Feb 2025</span>
+                            <span class="compliance-badge partial">Mar 2025</span>
+                        </div>
+                    </div>
+                    <button class="detail-button">Ver detalle</button>
+                </div>
+
+                <!-- Item 2 -->
+                <div class="ente-item">
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #681b32, #200b07); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;" class="ente-logo">E2</div>
+                    <div class="ente-content">
+                        <h5 class="ente-name">Operador Agrícola Provincial</h5>
+                        <p class="classification-badge">Operadores Municipales</p>
+                        <div class="compliances-badges">
+                            <span class="compliance-badge">Ene 2025</span>
+                            <span class="compliance-badge no">Feb 2025</span>
+                        </div>
+                    </div>
+                    <button class="detail-button">Ver detalle</button>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="ente-item">
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #681b32, #200b07); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;" class="ente-logo">E3</div>
+                    <div class="ente-content">
+                        <h5 class="ente-name">Junta de Agua Rural El Progreso</h5>
+                        <p class="classification-badge">Juntas de Agua</p>
+                        <div class="compliances-badges">
+                            <span class="compliance-badge">Ene 2025</span>
+                            <span class="compliance-badge">Feb 2025</span>
+                        </div>
+                    </div>
+                    <button class="detail-button">Ver detalle</button>
+                </div>
+            </div>
+        </div>
+
+        <h2>📊 Comparación de Breakpoints</h2>
+
+        <div class="comparison">
+            <div class="comparison-box active" id="mobileBox">
+                <h4>📱 Mobile (< 480px)</h4>
+                <p><strong>Optimizado para claridad y facilidad de uso</strong></p>
+                <ul class="feature-list">
+                    <li>Logos OCULTOS</li>
+                    <li>Nombre pequeño (0.9-1rem)</li>
+                    <li>Clasificación VISIBLE</li>
+                    <li>Cumplimientos OCULTOS</li>
+                    <li>Botón a ancho COMPLETO (44px+)</li>
+                    <li>Layout VERTICAL (grid de 1 columna)</li>
+                </ul>
+                <div class="diagram">┌──────────────┐
+│  Nombre      │
+├──────────────┤
+│ Clasif.      │
+├──────────────┤
+│ Ver detalle  │ (100% ancho)
+└──────────────┘</div>
+            </div>
+
+            <div class="comparison-box" id="tabletBox">
+                <h4>📊 Tablet (481px+)</h4>
+                <p><strong>Diseño completo restaurado</strong></p>
+                <ul class="feature-list">
+                    <li>Logos VISIBLES (60-70px)</li>
+                    <li>Nombre normal (1-1.1rem)</li>
+                    <li>Clasificación VISIBLE</li>
+                    <li>Cumplimientos VISIBLES</li>
+                    <li>Botón auto-width (120px+)</li>
+                    <li>Layout HORIZONTAL (flex row)</li>
+                </ul>
+                <div class="diagram">[Logo] Nombre | Clasif. | [Badges] [Botón]</div>
+            </div>
+        </div>
+
+        <h2>🔍 Detalles Técnicos</h2>
+
+        <div class="info-box">
+            <strong>Archivos Modificados:</strong>
+            <ul class="feature-list" style="margin-top: 10px;">
+                <li><code>react/src/Views/css/CumplimientosMesAnio.module.css</code> - Estilos responsivos</li>
+                <li><code>react/src/Views/CumplimientosMesAnio.jsx</code> - Agregado elemento img para logos</li>
+            </ul>
+        </div>
+
+        <h2>📝 Cambios CSS Principales</h2>
+
+        <div class="preview-container">
+            <h3>Estilos Base (Mobile L)</h3>
+            <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 0.85rem; overflow-x: auto;"><code>.enteLogMobileL {
+  display: none; /* Oculto en móvil */
+}
+
+.compliancesBadgesMobileL {
+  display: none; /* Oculto en móvil */
+}
+
+.enteItemMobileL {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}</code></pre>
+
+            <h3 style="margin-top: 20px;">Media Query para Tablet+ (481px)</h3>
+            <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 0.85rem; overflow-x: auto;"><code>@media (min-width: 481px) {
+  .enteLogMobileL {
+    display: block; /* Visible en tablet+ */
+  }
+
+  .compliancesBadgesMobileL {
+    display: block; /* Visible en tablet+ */
+  }
+
+  .enteItemMobileL {
+    display: flex;
+    flex-direction: row;
+  }
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        function selectViewport(width) {
+            const container = document.getElementById('previewContainer');
+            const info = document.getElementById('viewportInfo');
+            const mobileBox = document.getElementById('mobileBox');
+            const tabletBox = document.getElementById('tabletBox');
+
+            container.style.maxWidth = width + 'px';
+
+            // Update buttons
+            document.querySelectorAll('.viewport-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update viewport info
+            let label = '';
+            if (width === 375) {
+                label = '375px - Mobile';
+                mobileBox.classList.add('active');
+                tabletBox.classList.remove('active');
+            } else if (width === 425) {
+                label = '425px - Mobile L (Optimizado)';
+                mobileBox.classList.add('active');
+                tabletBox.classList.remove('active');
+            } else {
+                label = width + 'px - Tablet+';
+                mobileBox.classList.remove('active');
+                tabletBox.classList.add('active');
+            }
+
+            info.textContent = label;
+        }
+    </script>
+</body>
+</html>

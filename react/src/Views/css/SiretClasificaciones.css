@@ -1,0 +1,404 @@
+/* SiretClasificaciones Responsive Styles */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.modal-backdrop {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-backdrop.closing {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+
+.modal-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content.closing {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+/* Responsive header */
+.siret-clasificaciones-header {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: clamp(1.5rem, 4vw, 2rem) clamp(1rem, 3vw, 2rem);
+  margin-bottom: clamp(1.5rem, 3vw, 2rem);
+}
+
+.siret-clasificaciones-header h1 {
+  margin: 0;
+  margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  color: #fff;
+}
+
+.siret-clasificaciones-header p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  color: #fff;
+}
+
+/* List container */
+.siret-clasificaciones-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(250px, 80vw, 350px), 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+  margin-top: clamp(1.5rem, 3vw, 2rem);
+}
+
+@media (max-width: 480px) {
+  .siret-clasificaciones-list {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .siret-clasificaciones-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .siret-clasificaciones-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .siret-clasificaciones-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Classification card */
+.siret-clasificacion-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 1vw, 1rem);
+  border: 1px solid #e9ecef;
+}
+
+.siret-clasificacion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(104, 27, 50, 0.15);
+  border-color: #681b32;
+}
+
+.siret-clasificacion-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  margin: 0;
+  word-break: break-word;
+  flex: 1;
+}
+
+.siret-clasificacion-actions {
+  display: flex;
+  gap: clamp(0.5rem, 1vw, 0.75rem);
+  flex-wrap: wrap;
+}
+
+.siret-clasificacion-actions button {
+  flex: 1;
+  min-width: clamp(80px, 50%, 120px);
+}
+
+/* Modal */
+.siret-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: clamp(0.5rem, 2vw, 1rem);
+}
+
+.siret-modal-content {
+  width: 95%;
+  max-width: clamp(280px, 85vw, 600px);
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.siret-modal-header {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  color: #fff;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  flex-shrink: 0;
+  border-bottom: none;
+}
+
+.siret-modal-header h4 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.siret-modal-body {
+  padding: clamp(1.5rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  flex: 1;
+}
+
+.siret-modal-footer {
+  border-top: 1px solid #e9ecef;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  gap: clamp(0.5rem, 1vw, 1rem);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.siret-btn {
+  padding: clamp(8px, 1vw, 10px) clamp(16px, 2vw, 24px);
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+  border-radius: 6px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: clamp(100px, 100%, 150px);
+}
+
+@media (max-width: 480px) {
+  .siret-btn {
+    min-width: 100%;
+  }
+}
+
+.siret-btn-primary {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(104, 27, 50, 0.3);
+}
+
+.siret-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(104, 27, 50, 0.4);
+}
+
+.siret-btn-primary:active {
+  transform: translateY(0);
+}
+
+.siret-btn-secondary {
+  background: #fff;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.siret-btn-secondary:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.siret-btn-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.2);
+  flex: 0 1 auto;
+}
+
+.siret-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+}
+
+.siret-btn-sm {
+  padding: clamp(6px, 1vw, 8px) clamp(12px, 1.5vw, 16px);
+  font-size: clamp(0.75rem, 1.2vw, 0.85rem);
+}
+
+/* Form input */
+.siret-form-input {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: clamp(10px, 2vw, 12px) clamp(10px, 2vw, 14px);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.siret-form-input:focus {
+  outline: none;
+  border-color: #85435e;
+  box-shadow: 0 0 5px rgba(194, 24, 91, 0.5);
+  background-color: #fff0f5;
+  color: #333;
+}
+
+.siret-form-input:hover {
+  border-color: #85435e;
+}
+
+/* Form label */
+.siret-form-label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
+  display: block;
+}
+
+/* Loader */
+.siret-loader {
+  text-align: center;
+  padding: clamp(2rem, 4vw, 3rem);
+  color: #6c757d;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+}
+
+/* Empty state */
+.siret-empty-state {
+  text-align: center;
+  padding: clamp(2rem, 4vw, 4rem);
+  color: #6c757d;
+}
+
+.siret-empty-state svg {
+  width: clamp(48px, 12vw, 64px);
+  height: clamp(48px, 12vw, 64px);
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  opacity: 0.5;
+}
+
+.siret-empty-state p {
+  margin: 0;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+}
+
+/* Confirmation modal */
+.siret-delete-modal {
+  max-width: clamp(280px, 80vw, 480px);
+}
+
+.siret-delete-warning {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: #fff5f5;
+  border-left: 4px solid #dc3545;
+  border-radius: 6px;
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+}
+
+.siret-delete-warning p {
+  margin: 0;
+  color: #2c3e50;
+  font-size: clamp(0.9rem, 2vw, 1rem);
+  line-height: 1.5;
+}
+
+.siret-delete-warning strong {
+  color: #681b32;
+  word-break: break-word;
+}
+
+/* Responsive actions header */
+.siret-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  gap: clamp(0.5rem, 1vw, 1rem);
+  flex-wrap: wrap;
+}
+
+.siret-actions-header h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  color: #2c3e50;
+  flex: 1;
+  min-width: 200px;
+}
+
+.siret-actions-header button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .siret-actions-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .siret-actions-header button {
+    width: 100%;
+  }
+}
+
+/* Icon */
+.siret-icon {
+  width: clamp(16px, 2vw, 24px);
+  height: clamp(16px, 2vw, 24px);
+  vertical-align: middle;
+  margin-right: clamp(0.5rem, 1vw, 0.75rem);
+}
+
+/* Responsive container */
+.siret-container {
+  padding: 0;
+  margin: 0 auto;
+  width: 100%;
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding-top: clamp(50px, 10vw, 70px);
+}
+
+.siret-container-inner {
+  max-width: 100%;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: #f8f9fa;
+  min-height: calc(100vh - 70px);
+}
+
+@media (min-width: 768px) {
+  .siret-container-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}

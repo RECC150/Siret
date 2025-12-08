@@ -349,7 +349,7 @@ export default function CumplimientosPorEnte() {
             <div className="list-group">
               {results.map(r=>(
                 <div key={r.id} className="list-group-item d-flex align-items-center">
-                  <div style={{width:96,height:96,flex:'0 0 96px'}} className="me-3 d-flex align-items-center justify-content-center"><img src={r.img} alt={r.title} style={{maxWidth:88,maxHeight:88}}/></div>
+                  <div style={{width:96,height:96,flex:'0 0 96px'}} className="me-3 d-flex align-items-center justify-content-center"><img src={r.img} alt={r.title} style={{maxWidth:88,maxHeight:88}} onError={(e) => {e.target.style.display = 'none';}}/></div>
                   <div className="flex-grow-1">
                     <h5 className="mb-1">{r.title}</h5>
                     <p className="mb-1"><small className="text-white px-2 py-1 rounded" style={{background:'linear-gradient(to right,#681b32,#200b07)'}}>{r.classification}</small></p>

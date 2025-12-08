@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from "../assets/asebcs.jpg";
 import {
   ResponsiveContainer,
@@ -15,6 +16,7 @@ import {
 } from 'recharts';
 
 export default function Comparativa() {
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [viewMode, setViewMode] = useState('por-ente'); // 'por-ente' | 'por-mes-anio'
 
   const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036, 2037];
@@ -25,28 +27,34 @@ export default function Comparativa() {
   const containerRef = React.useRef(null);
 
   const [entesList, setEntesList] = useState([]);
-  const [leftFilterName, setLeftFilterName] = useState('');
-  const [leftFilterClass, setLeftFilterClass] = useState('');
-  const [rightFilterName, setRightFilterName] = useState('');
-  const [rightFilterClass, setRightFilterClass] = useState('');
+  const [leftFilterName, setLeftFilterName] = useLocalStorage('comparativa_leftFilterName', '');
+  const [leftFilterClass, setLeftFilterClass] = useLocalStorage('comparativa_leftFilterClass', '');
+  const [rightFilterName, setRightFilterName] = useLocalStorage('comparativa_rightFilterName', '');
+  const [rightFilterClass, setRightFilterClass] = useLocalStorage('comparativa_rightFilterClass', '');
 
   const [selectedLeft, setSelectedLeft] = useState(null);
   const [selectedRight, setSelectedRight] = useState(null);
   const [chartYearLeft, setChartYearLeft] = useState('Todos');
   const [chartYearRight, setChartYearRight] = useState('Todos');
-  const [selectedMonthForChart, setSelectedMonthForChart] = useState('Todos');
+  const [selectedMonthForChart, setSelectedMonthForChart] = useLocalStorage('comparativa_monthForChart', 'Todos');
   // default to the most recent up to 3 years
-  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useState(() => years.slice(-3));
+  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useLocalStorage('comparativa_yearsForMonthChart', years.slice(-3));
   // For per-ente comparisons: selected years per side (max 3, min 1)
-  const [selectedYearsLeft, setSelectedYearsLeft] = useState([]);
-  const [selectedYearsRight, setSelectedYearsRight] = useState([]);
+  const [selectedYearsLeft, setSelectedYearsLeft] = useLocalStorage('comparativa_yearsLeft', []);
+  const [selectedYearsRight, setSelectedYearsRight] = useLocalStorage('comparativa_yearsRight', []);
   // For month/year chart: selected months (checkboxes 1..12). Empty means all.
-  const [selectedMonthsForChart, setSelectedMonthsForChart] = useState(() => []);
+  const [selectedMonthsForChart, setSelectedMonthsForChart] = useLocalStorage('comparativa_monthsForChart', []);
 
   const entesListFallback = [
     { id: 1, title: 'Municipio de La Paz', classification: 'Municipios', compliances: [{ year:2025, month:'Enero', status:'cumplio'}] },
     { id: 2, title: 'Municipio de Los Cabos', classification: 'Municipios', compliances: [{ year:2025, month:'Enero', status:'parcial'}] },
   ];
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -617,7 +625,7 @@ export default function Comparativa() {
                       <div style={{ fontSize: 12, color: '#6c757d', marginTop: 4 }}>{e.classification}</div>
                     </div>
                     <div>
-                      <button className="btn btn-sm" onClick={()=>setSelectedLeft(e)} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontWeight: 600, fontSize: 13, transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(104, 27, 50, 0.2)' }}>Seleccionar</button>
+                      <button className="btn btn-sm" onClick={()=>setSelectedLeft(e)} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', borderRadius: 6, padding: windowWidth < 426 ? '6px 10px' : '8px 16px', fontWeight: 600, fontSize: windowWidth < 424 ? 11 : 13, transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(104, 27, 50, 0.2)' }}>Seleccionar</button>
                     </div>
                   </div>
                 ))}
@@ -630,7 +638,7 @@ export default function Comparativa() {
                         <div style={{ fontSize: 12, color: '#6c757d', marginTop: 4 }}>{selectedLeft.classification}</div>
                       </div>
                       <div>
-                        <button className="btn btn-sm" onClick={()=>setSelectedLeft(null)} style={{ background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontWeight: 600, fontSize: 13 }}>Quitar</button>
+                        <button className="btn btn-sm" onClick={()=>setSelectedLeft(null)} style={{ background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, padding: windowWidth < 426 ? '6px 10px' : '8px 16px', fontWeight: 600, fontSize: windowWidth < 424 ? 11 : 13 }}>Quitar</button>
                       </div>
                     </div>
                   </div>
@@ -653,21 +661,23 @@ export default function Comparativa() {
                           color: '#fff',
                           border: 'none',
                           borderRadius: 6,
-                          padding: '8px 14px',
+                          padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
                           fontWeight: 600,
-                          fontSize: 13,
+                          fontSize: windowWidth < 426 ? 11 : 13,
                           transition: 'all 0.3s ease',
                           boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6
+                          gap: windowWidth < 424 ? 3 : 6
                         }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                        </svg>
-                        Exportar PDF
+                        {windowWidth < 426 ? null : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                          </svg>
+                        )}
+                        {windowWidth < 426 ? 'PDF' : 'Exportar PDF'}
                       </button>
                       <button
                         className="btn btn-sm"
@@ -679,21 +689,23 @@ export default function Comparativa() {
                           color: '#fff',
                           border: 'none',
                           borderRadius: 6,
-                          padding: '8px 14px',
+                          padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
                           fontWeight: 600,
-                          fontSize: 13,
+                          fontSize: windowWidth < 426 ? 11 : 13,
                           transition: 'all 0.3s ease',
                           boxShadow: '0 2px 4px rgba(20, 83, 45, 0.2)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6
+                          gap: windowWidth < 426 ? 3 : 6
                         }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                        </svg>
-                        Exportar Excel
+                        {windowWidth < 424 ? null : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                          </svg>
+                        )}
+                        {windowWidth < 426 ? 'Excel' : 'Exportar Excel'}
                       </button>
                     </div>
                   </div>
@@ -833,7 +845,7 @@ export default function Comparativa() {
                     <div style={{ fontSize: 12, color: '#6c757d', marginTop: 4 }}>{e.classification}</div>
                   </div>
                   <div>
-                    <button className="btn btn-sm" onClick={()=>setSelectedRight(e)} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontWeight: 600, fontSize: 13, transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(104, 27, 50, 0.2)' }}>Seleccionar</button>
+                    <button className="btn btn-sm" onClick={()=>setSelectedRight(e)} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', borderRadius: 6, padding: windowWidth < 426 ? '6px 10px' : '8px 16px', fontWeight: 600, fontSize: windowWidth < 424 ? 11 : 13, transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(104, 27, 50, 0.2)' }}>Seleccionar</button>
                   </div>
                 </div>
               ))}
@@ -846,7 +858,7 @@ export default function Comparativa() {
                       <div style={{ fontSize: 12, color: '#6c757d', marginTop: 4 }}>{selectedRight.classification}</div>
                     </div>
                     <div>
-                      <button className="btn btn-sm" onClick={()=>setSelectedRight(null)} style={{ background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontWeight: 600, fontSize: 13 }}>Quitar</button>
+                      <button className="btn btn-sm" onClick={()=>setSelectedRight(null)} style={{ background: '#dc3545', color: '#fff', border: 'none', borderRadius: 6, padding: windowWidth < 426 ? '6px 10px' : '8px 16px', fontWeight: 600, fontSize: windowWidth < 424 ? 11 : 13 }}>Quitar</button>
                     </div>
                   </div>
                 </div>
@@ -870,21 +882,23 @@ export default function Comparativa() {
                         color: '#fff',
                         border: 'none',
                         borderRadius: 6,
-                        padding: '8px 14px',
+                        padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
                         fontWeight: 600,
-                        fontSize: 13,
+                        fontSize: windowWidth < 426 ? 11 : 13,
                         transition: 'all 0.3s ease',
                         boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6
+                        gap: windowWidth < 426 ? 3 : 6
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                      </svg>
-                      Exportar PDF
+                      {windowWidth < 426 ? null : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                        </svg>
+                      )}
+                      {windowWidth < 426 ? 'PDF' : 'Exportar PDF'}
                     </button>
                     <button
                       className="btn btn-sm"
@@ -896,21 +910,23 @@ export default function Comparativa() {
                         color: '#fff',
                         border: 'none',
                         borderRadius: 6,
-                        padding: '8px 14px',
+                        padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
                         fontWeight: 600,
-                        fontSize: 13,
+                        fontSize: windowWidth < 426 ? 11 : 13,
                         transition: 'all 0.3s ease',
                         boxShadow: '0 2px 4px rgba(20, 83, 45, 0.2)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6
+                        gap: windowWidth < 426 ? 3 : 6
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                      </svg>
-                      Exportar Excel
+                      {windowWidth < 426 ? null : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                        </svg>
+                      )}
+                      {windowWidth < 426 ? 'Excel' : 'Exportar Excel'}
                     </button>
                   </div>
                 </div>

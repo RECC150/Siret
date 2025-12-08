@@ -3,6 +3,7 @@ import ASEBCS from '../assets/asebcs.jpg';
 import Toast from '../Components/Toast';
 
 export default function SiretCumplimientos(){
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [compliances, setCompliances] = useState([]);
   const [entes, setEntes] = useState([]);
   const [clasificaciones, setClasificaciones] = useState([]);
@@ -35,6 +36,14 @@ export default function SiretCumplimientos(){
       } finally { setLoading(false); }
     };
     load();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const years = useMemo(()=>{
@@ -821,29 +830,34 @@ export default function SiretCumplimientos(){
 
       <div className="container py-4">
         <div style={{ width: '100%', marginTop: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', gap: windowWidth < 425 ? 8 : 12, padding: windowWidth < 425 ? '6px' : '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', flexDirection: windowWidth < 425 ? 'row' : 'row' }}>
           <button
             type="button"
             className="btn"
             onClick={() => setViewMode('añadir')}
             style={{
               flex: 1,
-              padding: '12px 20px',
+              padding: windowWidth < 425 ? '8px 6px' : '12px 20px',
               background: viewMode === 'añadir' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
               color: viewMode === 'añadir' ? '#fff' : '#681b32',
               border: viewMode === 'añadir' ? 'none' : '2px solid #681b32',
               borderRadius: '8px',
               fontWeight: 600,
               transition: 'all 0.3s ease',
-              boxShadow: viewMode === 'añadir' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+              boxShadow: viewMode === 'añadir' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none',
+              fontSize: windowWidth < 425 ? '11px' : '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: windowWidth < 425 ? 0 : 8
             }}
             aria-pressed={viewMode === 'añadir'}
             title="Añadir nuevo cumplimiento"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 425 ? 14 : 16} height={windowWidth < 425 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16">
               <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
             </svg>
-            Añadir
+            {windowWidth < 425 ? '' : 'Añadir'}
           </button>
 
           <button
@@ -852,22 +866,27 @@ export default function SiretCumplimientos(){
             onClick={() => setViewMode('editar')}
             style={{
               flex: 1,
-              padding: '12px 20px',
+              padding: windowWidth < 425 ? '8px 6px' : '12px 20px',
               background: viewMode === 'editar' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
               color: viewMode === 'editar' ? '#fff' : '#681b32',
               border: viewMode === 'editar' ? 'none' : '2px solid #681b32',
               borderRadius: '8px',
               fontWeight: 600,
               transition: 'all 0.3s ease',
-              boxShadow: viewMode === 'editar' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+              boxShadow: viewMode === 'editar' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none',
+              fontSize: windowWidth < 425 ? '11px' : '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: windowWidth < 425 ? 0 : 8
             }}
             aria-pressed={viewMode === 'editar'}
             title="Editar cumplimientos"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 425 ? 14 : 16} height={windowWidth < 425 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16">
               <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
             </svg>
-            Editar
+            {windowWidth < 425 ? '' : 'Editar'}
           </button>
 
           <button
@@ -876,23 +895,28 @@ export default function SiretCumplimientos(){
             onClick={() => setViewMode('importar')}
             style={{
               flex: 1,
-              padding: '12px 20px',
+              padding: windowWidth < 425 ? '8px 6px' : '12px 20px',
               background: viewMode === 'importar' ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#fff',
               color: viewMode === 'importar' ? '#fff' : '#681b32',
               border: viewMode === 'importar' ? 'none' : '2px solid #681b32',
               borderRadius: '8px',
               fontWeight: 600,
               transition: 'all 0.3s ease',
-              boxShadow: viewMode === 'importar' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none'
+              boxShadow: viewMode === 'importar' ? '0 4px 6px rgba(104, 27, 50, 0.3)' : 'none',
+              fontSize: windowWidth < 425 ? '11px' : '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: windowWidth < 425 ? 0 : 8
             }}
             aria-pressed={viewMode === 'importar'}
             title="Importar cumplimientos"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 425 ? 14 : 16} height={windowWidth < 425 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16">
               <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
               <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
             </svg>
-            Importar
+            {windowWidth < 425 ? '' : 'Importar'}
           </button>
         </div>
       </div>
@@ -1010,9 +1034,11 @@ export default function SiretCumplimientos(){
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
-                    </svg>
+                    {windowWidth >= 425 && (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+                      </svg>
+                    )}
                     Año {year}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1062,13 +1088,13 @@ export default function SiretCumplimientos(){
                       style={{
                         background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                         color: '#fff',
-                        padding: '6px 12px',
+                        padding: '6px 8px',
                         borderRadius: 8,
                         fontWeight: 600,
                         fontSize: 12,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: 0,
                         cursor: 'pointer',
                         boxShadow: '0 2px 6px rgba(220,53,69,0.3)'
                       }}
@@ -1079,7 +1105,7 @@ export default function SiretCumplimientos(){
                         <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
                         <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
                       </svg>
-                      Eliminar
+                      {windowWidth >= 425 && 'Eliminar'}
                     </span>
                   </div>
                 </button>
@@ -1100,13 +1126,13 @@ export default function SiretCumplimientos(){
 
                       return (
                         <>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <h6 style={{ fontWeight: 600, margin: 0, color: '#200b07', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: windowWidth < 768 ? 'wrap' : 'nowrap', gap: windowWidth < 768 ? 12 : 0 }}>
+                            <h6 style={{ fontWeight: 600, margin: 0, color: '#200b07', display: 'flex', alignItems: 'center', gap: 8, width: windowWidth < 768 ? '100%' : 'auto' }}>
                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
                               </svg>
                               Meses disponibles
-                              {(() => {
+                                {windowWidth >= 425 && (() => {
                                 const stats = calculateYearStats(year);
                                 return (
                                   <span style={{ display: 'flex', gap: 6, marginLeft: 12, fontSize: 12 }}>
@@ -1121,9 +1147,9 @@ export default function SiretCumplimientos(){
                                     </span>
                                   </span>
                                 );
-                              })()}
+                                })()}
                             </h6>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: windowWidth < 768 ? 6 : 8, alignItems: 'center', width: windowWidth < 768 ? '100%' : 'auto', justifyContent: windowWidth < 768 ? 'stretch' : 'flex-end' }}>
                               {!!nextMonthName && (
                                 <button
                                   onClick={() => {
@@ -1137,24 +1163,27 @@ export default function SiretCumplimientos(){
                                     background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                                     color: '#fff',
                                     border: 'none',
-                                    padding: '8px 16px',
+                                    padding: windowWidth < 768 ? '6px 8px' : '8px 16px',
                                     borderRadius: 8,
                                     fontWeight: 600,
-                                    fontSize: 13,
+                                    fontSize: windowWidth < 768 ? '12px' : '13px',
                                     cursor: 'pointer',
                                     boxShadow: '0 2px 6px rgba(104, 27, 50, 0.3)',
                                     transition: 'all 0.2s ease',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: 6
+                                    justifyContent: 'center',
+                                    gap: windowWidth < 768 ? 4 : 6,
+                                    flex: windowWidth < 768 ? 1 : 'auto',
+                                    whiteSpace: windowWidth < 768 ? 'nowrap' : 'normal'
                                   }}
                                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(104, 27, 50, 0.4)'; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(104, 27, 50, 0.3)'; }}
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 12 : 14} height={windowWidth < 768 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                                   </svg>
-                                  {`Añadir ${nextMonthName}`}
+                                  {windowWidth < 768 ? 'Mes' : `Añadir ${nextMonthName}`}
                                 </button>
                               )}
                               <button
@@ -1165,23 +1194,27 @@ export default function SiretCumplimientos(){
                                   background: 'linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%)',
                                   color: '#fff',
                                   border: 'none',
-                                  padding: '8px 16px',
+                                  padding: windowWidth < 768 ? '6px 8px' : '8px 16px',
                                   borderRadius: 8,
                                   fontWeight: 600,
-                                  fontSize: 13,
+                                  fontSize: windowWidth < 768 ? '12px' : '13px',
                                   cursor: 'pointer',
                                   boxShadow: '0 2px 6px rgba(13,110,253,0.3)',
                                   transition: 'all 0.2s ease',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: 6
+                                  justifyContent: 'center',
+                                  gap: windowWidth < 768 ? 4 : 6,
+                                  flex: windowWidth < 768 ? 1 : 'auto'
                                 }}
+                                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(13,110,253,0.4)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(13,110,253,0.3)'; }}
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 12 : 14} height={windowWidth < 768 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
                                   <path d="M10.442 10.442a1 1 0 0 1-1.415 0L6.5 7.915l-1.528 1.529a1 1 0 1 1-1.415-1.415l2.236-2.236a1 1 0 0 1 1.415 0l2.236 2.236a1 1 0 0 1 0 1.415z"/>
                                   <path d="M12 5.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z"/>
                                 </svg>
-                                Ver Entes
+                                {windowWidth < 768 ? 'Entes' : 'Ver Entes'}
                               </button>
                             </div>
                           </div>
@@ -1249,26 +1282,26 @@ export default function SiretCumplimientos(){
                 Filtros de búsqueda
               </h6>
               <div className="row g-3 align-items-end">
-                <div className="col-md-5">
-                  <label htmlFor="edit-ente" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Ente</label>
+                <div className={windowWidth < 768 ? 'col-12' : 'col-md-5'}>
+                  <label htmlFor="edit-ente" className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: windowWidth < 425 ? '13px' : '14px' }}>Ente</label>
                   <input id="edit-ente" list="edit-entes-list" className="form-control" value={editEnteQuery} onChange={e=>{
                     const v = e.target.value || '';
                     setEditEnteQuery(v);
                     const match = (entes || []).find(x => String(x.title) === String(v));
                     if (match) setEditSelectedEnteId(match.id); else setEditSelectedEnteId(null);
-                  }} placeholder="Buscar ente" style={{ borderRadius: '8px', padding: '10px 14px' }} />
+                  }} placeholder="Buscar ente" style={{ borderRadius: '8px', padding: '10px 14px', fontSize: windowWidth < 425 ? '13px' : '14px' }} />
                   <datalist id="edit-entes-list">{(entes||[]).map((e,i)=>(<option key={i} value={e.title}/>))}</datalist>
                 </div>
-                <div className="col-md-3">
-                  <label className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación</label>
-                  <select className="form-select" value={editClasifFilter} onChange={e=>setEditClasifFilter(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }}>
+                <div className={windowWidth < 768 ? 'col-12' : 'col-md-3'}>
+                  <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: windowWidth < 425 ? '13px' : '14px' }}>Clasificación</label>
+                  <select className="form-select" value={editClasifFilter} onChange={e=>setEditClasifFilter(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px', fontSize: windowWidth < 425 ? '13px' : '14px' }}>
                     <option value="Todos">Todos</option>
                     {clasificaciones.map(c => (<option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>))}
                   </select>
                 </div>
-                <div className="col-md-2">
-                  <label className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Año</label>
-                  <select className="form-select" value={filterYear} onChange={e=>setFilterYear(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }}>
+                <div className={windowWidth < 768 ? 'col-12' : 'col-md-2'}>
+                  <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: windowWidth < 425 ? '13px' : '14px' }}>Año</label>
+                  <select className="form-select" value={filterYear} onChange={e=>setFilterYear(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px', fontSize: windowWidth < 425 ? '13px' : '14px' }}>
                     {years.map(y => (<option key={y} value={y}>{y}</option>))}
                   </select>
                 </div>
@@ -1333,7 +1366,7 @@ export default function SiretCumplimientos(){
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff' }}>
                     <th style={{ borderBottom: 'none', padding: '14px 16px', fontWeight: 600 }}>Ente</th>
-                    <th style={{ borderBottom: 'none', padding: '14px 16px', fontWeight: 600 }}>Meses</th>
+                    {windowWidth >= 426 && <th style={{ borderBottom: 'none', padding: '14px 16px', fontWeight: 600 }}>Meses</th>}
                     <th style={{ borderBottom: 'none', textAlign: 'center', padding: '14px 16px', fontWeight: 600, width: 80 }}>IC</th>
                     <th style={{ borderBottom: 'none', textAlign: 'center', padding: '14px 16px', fontWeight: 600 }}>Acciones</th>
                   </tr>
@@ -1392,6 +1425,7 @@ export default function SiretCumplimientos(){
                             </div>
                           </td>
 
+                          {windowWidth >= 426 && (
                           <td style={{ borderBottom: '1px solid #e9ecef', padding: '12px 16px' }}>
                             {uniqueMonths.length === 0 ? (
                               <span style={{ fontSize: 12, color: '#6c757d' }}>Sin meses</span>
@@ -1416,6 +1450,7 @@ export default function SiretCumplimientos(){
                               </div>
                             )}
                           </td>
+                          )}
                           <td style={{ borderBottom: '1px solid #e9ecef', textAlign: 'center', padding: '16px' }}>
                             <span style={{
                               background: '#e9ecef',
@@ -1427,11 +1462,11 @@ export default function SiretCumplimientos(){
                             }}>{enteIC}%</span>
                           </td>
                           <td style={{ borderBottom: '1px solid #e9ecef', textAlign: 'center', padding: '16px' }}>
-                            <button className="btn btn-sm" onClick={()=>setEditingEnte(ente)} style={{ background: 'linear-gradient(to right, #681b32, #200b07)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 500, boxShadow: '0 2px 4px rgba(104, 27, 50, 0.2)', transition: 'transform 0.2s ease' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'} title="Editar">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 6, verticalAlign: 'middle' }}>
+                            <button className="btn btn-sm" onClick={()=>setEditingEnte(ente)} style={{ background: 'linear-gradient(to right, #681b32, #200b07)', color: '#fff', border: 'none', padding: windowWidth < 426 ? '6px 8px' : '8px 16px', borderRadius: '6px', fontWeight: 500, boxShadow: '0 2px 4px rgba(104, 27, 50, 0.2)', transition: 'transform 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: windowWidth < 426 ? 0 : 6 }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'} title="Editar">
+                              <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 426 ? 14 : 16} height={windowWidth < 426 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: windowWidth < 426 ? 0 : 6, verticalAlign: 'middle' }}>
                                 <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
                               </svg>
-                              Editar
+                              {windowWidth < 426 ? '' : 'Editar'}
                             </button>
                           </td>
                         </tr>
@@ -1507,25 +1542,28 @@ export default function SiretCumplimientos(){
         <div className={`modal-backdrop${closingModalIndex === 'entes' ? ' closing' : ''}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className={`modal-content${closingModalIndex === 'entes' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 18, paddingLeft: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', flex: 1 }}>
+            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 360 ? '12px 16px' : 18, paddingLeft: windowWidth < 360 ? 16 : 22, display: 'flex', alignItems: windowWidth < 320 ? 'flex-start' : 'center', justifyContent: 'space-between', gap: windowWidth < 320 ? 8 : (windowWidth < 425 ? 8 : 30), flexDirection: windowWidth < 320 ? 'column' : 'row' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 360 ? 8 : 16 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 18 }}>Entes activos</div>
-                  <div style={{ opacity: 0.9 }}>Año {entesModalYear}</div>
+                  <div style={{ fontWeight: 700, fontSize: windowWidth < 360 ? 16 : 18 }}>Entes activos</div>
+                  <div style={{ opacity: 0.9, fontSize: windowWidth < 360 ? 11 : 13 }}>Año {entesModalYear}</div>
                 </div>
+              </div>
+
+              {/* Search and Filter Inputs - Desktop */}
+              {windowWidth >= 624 && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                   <input
-                    type = "text"
+                    type="text"
                     placeholder="Buscar por nombre"
                     value={entesModalSearchName}
-
                     onChange={e=>setEntesModalSearchName(e.target.value)}
-                    style={{ borderRadius: 8, minWidth: 180, border: '1px solid rgba(255,255,255,0.3)', background: '#440D1E', color: '#fff', padding: '8px 12px', outline: 'none' }}
+                    style={{ borderRadius: 8, minWidth: 220, border: '1px solid rgba(255,255,255,0.3)', background: '#440D1E', color: '#fff', padding: '9px 14px', outline: 'none', fontSize: 14 }}
                   />
                   <select
                     value={entesModalClasif}
                     onChange={e=>setEntesModalClasif(e.target.value)}
-                    style={{ borderRadius: 8, minWidth: 180, border: '1px solid rgba(255,255,255,0.3)', background: '#440D1E', color: '#fff', padding: '8px 12px', outline: 'none' }}
+                    style={{ borderRadius: 8, minWidth: 200, border: '1px solid rgba(255,255,255,0.3)', background: '#440D1E', color: '#fff', padding: '9px 14px', outline: 'none', fontSize: 14, cursor: 'pointer' }}
                   >
                     <option value="Todos">Todas las clasificaciones</option>
                     {clasificaciones.map(c => (
@@ -1533,8 +1571,30 @@ export default function SiretCumplimientos(){
                     ))}
                   </select>
                 </div>
-              </div>
+              )}
 
+              {/* Search and Filter Inputs - Mobile */}
+              {windowWidth < 624 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth < 360 ? 4 : 6, width: windowWidth < 320 ? '100%' : 'auto', minWidth: windowWidth < 320 ? 'auto' : (windowWidth < 360 ? 140 : 180) }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre"
+                    value={entesModalSearchName}
+                    onChange={e=>setEntesModalSearchName(e.target.value)}
+                    style={{ borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: '#440D1E', color: '#fff', padding: windowWidth < 360 ? '4px 8px' : '6px 10px', outline: 'none', fontSize: windowWidth < 360 ? 11 : 12 }}
+                  />
+                  <select
+                    value={entesModalClasif}
+                    onChange={e=>setEntesModalClasif(e.target.value)}
+                    style={{ borderRadius: 6, border: '1px solid rgba(255,255,255,0.3)', background: '#440D1E', color: '#fff', padding: windowWidth < 360 ? '4px 8px' : '6px 10px', outline: 'none', fontSize: windowWidth < 360 ? 11 : 12, cursor: 'pointer' }}
+                  >
+                    <option value="Todos">Todas las clasificaciones</option>
+                    {clasificaciones.map(c => (
+                      <option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Body */}
@@ -1625,19 +1685,19 @@ export default function SiretCumplimientos(){
             </div>
 
             {/* Footer */}
-            <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                <div style={{ display: 'flex', flexDirection: 'row', gap: 10, background: '#fff', padding: '8px 10px', borderRadius: 8, border: '1px solid #dee2e6' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, background: entesModalFilter === 'todos' ? '#e9ecef' : 'transparent', transition: 'all 0.2s' }}>
+            <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexDirection: windowWidth < 425 ? 'column' : 'row' }}>
+                <div style={{ display: 'flex', flexDirection: 'row', gap: windowWidth < 425 ? 4 : 10, background: '#fff', padding: windowWidth < 425 ? '6px 6px' : '8px 10px', borderRadius: 8, border: '1px solid #dee2e6', width: windowWidth < 425 ? '100%' : 'auto' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 425 ? 3 : 6, cursor: 'pointer', padding: windowWidth < 425 ? '2px 6px' : '4px 8px', borderRadius: 6, background: entesModalFilter === 'todos' ? '#e9ecef' : 'transparent', transition: 'all 0.2s', flex: windowWidth < 425 ? 1 : 'auto' }}>
                         <input type="radio" name="entesFilter" value="todos" checked={entesModalFilter === 'todos'} onChange={e=>setEntesModalFilter(e.target.value)} style={{ cursor: 'pointer' }} />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#495057' }}>Todos</span>
+                        <span style={{ fontSize: windowWidth < 425 ? 11 : 13, fontWeight: 500, color: '#495057' }}>{windowWidth < 426 ? 'T' : 'Todos'}</span>
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, background: entesModalFilter === 'activos' ? '#e9ecef' : 'transparent', transition: 'all 0.2s' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 425 ? 3 : 6, cursor: 'pointer', padding: windowWidth < 425 ? '2px 6px' : '4px 8px', borderRadius: 6, background: entesModalFilter === 'activos' ? '#e9ecef' : 'transparent', transition: 'all 0.2s', flex: windowWidth < 425 ? 1 : 'auto' }}>
                         <input type="radio" name="entesFilter" value="activos" checked={entesModalFilter === 'activos'} onChange={e=>setEntesModalFilter(e.target.value)} style={{ cursor: 'pointer' }} />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#495057' }}>Activos</span>
+                        <span style={{ fontSize: windowWidth < 425 ? 11 : 13, fontWeight: 500, color: '#495057' }}>{windowWidth < 426 ? 'A' : 'Activos'}</span>
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, background: entesModalFilter === 'desactivados' ? '#e9ecef' : 'transparent', transition: 'all 0.2s' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 425 ? 3 : 6, cursor: 'pointer', padding: windowWidth < 425 ? '2px 6px' : '4px 8px', borderRadius: 6, background: entesModalFilter === 'desactivados' ? '#e9ecef' : 'transparent', transition: 'all 0.2s', flex: windowWidth < 425 ? 1 : 'auto' }}>
                         <input type="radio" name="entesFilter" value="desactivados" checked={entesModalFilter === 'desactivados'} onChange={e=>setEntesModalFilter(e.target.value)} style={{ cursor: 'pointer' }} />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#495057' }}>Desactivados</span>
+                        <span style={{ fontSize: windowWidth < 425 ? 11 : 13, fontWeight: 500, color: '#495057' }}>{windowWidth < 426 ? 'D' : 'Desactivados'}</span>
                     </label>
                 </div>
               <button
@@ -1647,11 +1707,13 @@ export default function SiretCumplimientos(){
                   background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                   color: '#fff',
                   border: 'none',
-                  padding: '10px 24px',
+                  padding: windowWidth < 425 ? '8px 16px' : '10px 24px',
                   fontWeight: 600,
                   borderRadius: 8,
+                  fontSize: windowWidth < 425 ? '13px' : '14px',
                   boxShadow: '0 2px 6px rgba(104, 27, 50, 0.3)',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  width: windowWidth < 425 ? '100%' : 'auto'
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(104, 27, 50, 0.4)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(104, 27, 50, 0.3)'; }}
@@ -1668,12 +1730,16 @@ export default function SiretCumplimientos(){
         <div className={`modal-backdrop${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className={`modal-content${closingModalIndex === 'month' ? ' closing' : ''}`} style={{ width: '95%', maxWidth: 1100, maxHeight: '90vh', background: '#fff', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: 20, paddingLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 360 ? '12px 16px' : 20, paddingLeft: windowWidth < 360 ? 16 : 24, display: 'flex', alignItems: windowWidth < 320 ? 'flex-start' : 'center', justifyContent: 'space-between', gap: windowWidth < 320 ? 8 : (windowWidth < 425 ? 8 : 30), flexDirection: windowWidth < 320 ? 'column' : 'row' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 360 ? 8 : 20 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>{monthModalMonth}</div>
-                  <div style={{ opacity: 0.9, fontSize: 14 }}>Año {monthModalYear}</div>
+                  <div style={{ fontWeight: 700, fontSize: windowWidth < 360 ? 16 : 20, marginBottom: 4 }}>{monthModalMonth}</div>
+                  <div style={{ opacity: 0.9, fontSize: windowWidth < 360 ? 11 : 14 }}>Año {monthModalYear}</div>
                 </div>
+              </div>
+
+              {/* Search and Filter Inputs - Desktop */}
+              {windowWidth >= 780 && (
                 <div style={{ display: 'flex', gap: 12 }}>
                   <input
                     type="text"
@@ -1712,7 +1778,48 @@ export default function SiretCumplimientos(){
                     ))}
                   </select>
                 </div>
-              </div>
+              )}
+
+              {/* Search and Filter Inputs - Mobile */}
+              {windowWidth < 779 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: windowWidth < 360 ? 4 : 6, width: windowWidth < 320 ? '100%' : 'auto', minWidth: windowWidth < 320 ? 'auto' : (windowWidth < 360 ? 140 : 180) }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre"
+                    value={monthModalSearchName}
+                    onChange={e=>setMonthModalSearchName(e.target.value)}
+                    style={{
+                      borderRadius: 6,
+                      border: '1px solid #dee2e6',
+                      background: '#440D1E',
+                      color: '#fff',
+                      padding: windowWidth < 360 ? '4px 8px' : '6px 10px',
+                      outline: 'none',
+                      fontSize: windowWidth < 360 ? 11 : 12
+                    }}
+                  />
+                  <select
+                    value={monthModalClasif}
+                    onChange={e=>setMonthModalClasif(e.target.value)}
+                    style={{
+                      borderRadius: 6,
+                      border: '1px solid #dee2e6',
+                      background: '#440D1E',
+                      color: '#fff',
+                      padding: windowWidth < 360 ? '4px 8px' : '6px 10px',
+                      outline: 'none',
+                      fontSize: windowWidth < 360 ? 11 : 12,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="Todos">Todas las clasificaciones</option>
+                    {clasificaciones.map(c => (
+                      <option key={c.id} value={c.name || c.title}>{c.name || c.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {!monthModalReadOnly && (
                 <button
                   onClick={() => { setShowMonthModal(false); setShowDeleteMonthModal(true); }}
@@ -1720,25 +1827,26 @@ export default function SiretCumplimientos(){
                     background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
                     color: '#fff',
                     border: 'none',
-                    padding: '8px 16px',
+                    padding: windowWidth < 360 ? '6px 10px' : '8px 16px',
                     borderRadius: 8,
                     fontWeight: 600,
-                    fontSize: 13,
+                    fontSize: windowWidth < 360 ? 12 : 13,
                     cursor: 'pointer',
                     boxShadow: '0 2px 6px rgba(220,53,69,0.3)',
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6
+                    gap: windowWidth < 360 ? 4 : 6,
+                    whiteSpace: 'nowrap'
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.4)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.3)'; }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 360 ? 12 : 14} height={windowWidth < 360 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
                     <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
                     <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
                   </svg>
-                  Eliminar mes
+                  {windowWidth < 426 ? '' : (windowWidth < 360 ? 'Eliminar' : 'Eliminar mes')}
                 </button>
               )}
             </div>
@@ -1828,7 +1936,7 @@ export default function SiretCumplimientos(){
             {/* Footer */}
             <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                {(() => {
+                {windowWidth >= 430 && (() => {
                   const stats = calculateMonthStats(monthModalYear, monthModalMonth);
                   return (
                     <>
@@ -2019,19 +2127,23 @@ export default function SiretCumplimientos(){
         <div className={`modal-backdrop${closingModalIndex === 'editingEnte' ? ' closing' : ''}`} style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div className={`modal-content${closingModalIndex === 'editingEnte' ? ' closing' : ''}`} style={{ width: '90%', maxWidth: 900, background: '#fff', borderRadius: 12, maxHeight: '90vh', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
             {/* Encabezado sticky */}
-            <div style={{ position: 'sticky', top: 0, background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', zIndex: 10, padding: 24, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+            <div style={{ position: 'sticky', top: 0, background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', zIndex: 10, padding: windowWidth < 360 ? '12px 16px' : 24, paddingBottom: windowWidth < 360 ? 12 : 20, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: windowWidth < 320 ? 'flex-start' : 'center', flexDirection: windowWidth < 320 ? 'column' : 'row', gap: windowWidth < 320 ? 8 : 0, flexShrink: 0 }}>
               <div>
-                <h5 style={{ margin: 0, marginBottom: 6, fontSize: 20, fontWeight: 700 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 10, verticalAlign: 'middle' }}>
+                <h5 style={{ margin: 0, marginBottom: 6, fontSize: windowWidth < 360 ? 16 : 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: windowWidth < 360 ? 6 : 10 }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 360 ? 16 : 22} height={windowWidth < 360 ? 16 : 22} fill="currentColor" viewBox="0 0 16 16" style={{ verticalAlign: 'middle' }}>
                     <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
                   </svg>
                   {editingEnte.title}
                 </h5>
-                <small style={{ opacity: 0.9, fontSize: 13 }}>{editingEnte.classification}</small>
+                {windowWidth >= 768 && (
+                  <small style={{ color: 'rgba(255,255,255,0.8)', fontSize: windowWidth < 360 ? 12 : 14, fontWeight: 500 }}>
+                    {editingEnte.classification}
+                  </small>
+                )}
               </div>
               <div>
-                <h5 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+                <h5 style={{ margin: 0, fontSize: windowWidth < 360 ? 14 : 18, fontWeight: 600, display: 'flex', alignItems: 'center', gap: windowWidth < 360 ? 4 : 8 }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 360 ? 14 : 18} height={windowWidth < 360 ? 14 : 18} fill="currentColor" viewBox="0 0 16 16" style={{ verticalAlign: 'middle' }}>
                     <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
                   </svg>
                   Año {filterYear}
@@ -2162,8 +2274,8 @@ export default function SiretCumplimientos(){
             </div>
 
             {/* Botones de acción sticky + Indicadores */}
-            <div style={{ position: 'sticky', bottom: 0, background: '#f8f9fa', zIndex: 10, padding: 20, paddingTop: 18, borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-              {(() => {
+            <div style={{ position: 'sticky', bottom: 0, background: '#f8f9fa', zIndex: 10, padding: windowWidth < 768 ? 12 : 20, paddingTop: windowWidth < 768 ? 10 : 18, borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: windowWidth < 768 ? 'column' : 'row', gap: windowWidth < 768 ? 12 : 0, flexShrink: 0 }}>
+              {windowWidth >= 768 && (() => {
                 const stats = calculateEnteStats(editingEnte.id, filterYear);
                 return (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2174,8 +2286,8 @@ export default function SiretCumplimientos(){
                   </div>
                 );
               })()}
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn" onClick={closeEditingEnteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>
+              <div style={{ display: 'flex', gap: windowWidth < 768 ? 8 : 10, width: windowWidth < 768 ? '100%' : 'auto' }}>
+                <button className="btn" onClick={closeEditingEnteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: windowWidth < 768 ? '8px 12px' : '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease', flex: windowWidth < 768 ? 1 : 'initial', fontSize: windowWidth < 768 ? 12 : 14 }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>
                   Cancelar
                 </button>
                 <button className="btn" onClick={async ()=>{
@@ -2218,11 +2330,11 @@ export default function SiretCumplimientos(){
                   console.error('Error:', error);
                   setToast({ message: 'Error al guardar los cambios', type: 'error' });
                 }
-              }} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: 8, verticalAlign: 'middle' }}>
+              }} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', border: 'none', padding: windowWidth < 768 ? '8px 12px' : '10px 28px', fontWeight: 600, borderRadius: 8, boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)', transition: 'all 0.2s ease', flex: windowWidth < 768 ? 1 : 'initial', fontSize: windowWidth < 768 ? 12 : 14 }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 768 ? 14 : 16} height={windowWidth < 768 ? 14 : 16} fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: windowWidth < 768 ? 4 : 8, verticalAlign: 'middle' }}>
                   <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                 </svg>
-                Guardar Cambios
+                {windowWidth < 768 ? 'Guardar' : 'Guardar Cambios'}
               </button>
               </div>
             </div>

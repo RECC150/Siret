@@ -1,6 +1,15 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Max-Age: 3600');
+header('Content-Type: application/json; charset=utf-8');
+
+// Manejar preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 $host = '127.0.0.1';
 $db   = 'siret';
@@ -31,27 +40,46 @@ if ($id <= 0) {
 }
 
 try {
-    // Verificar si la clasificación está en uso
-    $checkSql = "SELECT COUNT(*) as count FROM entes WHERE classification_id = :id";
-    $checkStmt = $pdo->prepare($checkSql);
-    $checkStmt->execute(['id' => $id]);
-    $result = $checkStmt->fetch();
+    // Desactivar restricciones de clave foránea
+    $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
 
-    if ($result['count'] > 0) {
-        http_response_code(400);
+    // 1. Actualizar entes que usan esta clasificación a NULL
+    $sql1 = "UPDATE entes SET classification_id = NULL WHERE classification_id = ?";
+    $stmt1 = $pdo->prepare($sql1);
+    $stmt1->execute([$id]);
+
+    // 2. Eliminar la clasificación
+    $sql2 = "DELETE FROM classifications WHERE id = ?";
+    $stmt2 = $pdo->prepare($sql2);
+    $stmt2->execute([$id]);
+
+    $rowsDeleted = $stmt2->rowCount();
+
+    // Reactivar restricciones de clave foránea
+    $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
+
+    if ($rowsDeleted > 0) {
+        http_response_code(200);
+        echo json_encode([
+            'success' => true,
+            'id' => $id,
+            'deleted' => true,
+            'message' => 'Clasificación eliminada exitosamente'
+        ]);
+    } else {
+        http_response_code(404);
         echo json_encode([
             'success' => false,
-            'error' => 'in_use',
-            'message' => 'No se puede eliminar esta clasificación porque está siendo utilizada por ' . $result['count'] . ' ente(s)'
+            'error' => 'not_found',
+            'message' => 'Clasificación no encontrada'
         ]);
-        exit;
     }
-
-    $sql = "DELETE FROM classifications WHERE id = :id";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['id' => $id]);
-    echo json_encode(['success' => true, 'id' => $id, 'deleted' => true, 'message' => 'Clasificación eliminada exitosamente']);
 } catch (Exception $e) {
+    // Asegurar que se reactiven las restricciones incluso con error
+    try {
+        $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
+    } catch (Exception $ignored) {}
+
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'delete_failed', 'message' => $e->getMessage()]);
 }
