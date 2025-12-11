@@ -364,7 +364,7 @@ export default function Inicio() {
                   públicos administrados y ejercidos por los sujetos de
                   fiscalización.
                 </p>
-                <a href="#mas-informacion" className="btn btn-light mt-3">
+                <a href="https://asebcs.gob.mx/" className="btn btn-light mt-3" target="_blank" rel="noopener noreferrer">
                   Más información
                 </a>
               </div>
@@ -596,8 +596,8 @@ export default function Inicio() {
                   <div className="inicio-card-body">
                     <div className="inicio-card-title">{card.title}</div>
                     <div className="inicio-card-description">{card.description}</div>
-                    <button className="inicio-card-button" onClick={() => navigate(card.path)}>
-                      Ir a {card.title}ASEedificioc.png
+                    <button className="inicio-card-button" onClick={() => { window.scrollTo(0, 0); navigate(card.path); }}>
+                      {card.title}
                     </button>
                   </div>
                 </div>

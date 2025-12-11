@@ -12,17 +12,17 @@ CREATE TABLE IF NOT EXISTS classifications (
 CREATE TABLE IF NOT EXISTS entes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(250) NOT NULL,
-  classification_id INT NULL,
+  classification INT NULL,
   img VARCHAR(500) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (classification_id) REFERENCES classifications(id) ON DELETE SET NULL
+  FOREIGN KEY (classification) REFERENCES classifications(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Tabla de cumplimientos (por mes/año)
 CREATE TABLE IF NOT EXISTS compliances (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  ente_id INT NOT NULL,
+  ente INT NOT NULL,
   year SMALLINT NOT NULL,
   month VARCHAR(20) NOT NULL,
   status VARCHAR(30) NOT NULL, -- 'cumplio' | 'parcial' | 'no'
@@ -54,7 +54,7 @@ INSERT INTO classifications (name) VALUES
 ('Comisiones');
 
 -- Poblado de entes
-INSERT INTO entes (title, classification_id, img) VALUES
+INSERT INTO entes (title, classification, img) VALUES
 ('Congreso del Estado de Baja California Sur', 1, '/assets/asebcs.jpg'),
 ('Secretaría de Finanzas y Administración del Estado de Baja California Sur', 1, '/assets/asebcs.jpg'),
 ('Consejo de la Judicatura en el Estado de Baja California Sur', 1, '/assets/asebcs.jpg'),
@@ -139,8 +139,7 @@ INSERT INTO entes (title, classification_id, img) VALUES
 ('Fideicomiso de Obras de Infraestructura Social de Los Cabos', 6, '/assets/asebcs.jpg');
 
 -- Poblado de cumplimientos (ejemplos)
-INSERT INTO compliances (ente_id, year, month, status) VALUES
---Poder Legislativo, Ejecutivo, Judicial, Autónomos y Paraestatales
+INSERT INTO compliances (ente, year, month, status) VALUES
 (1,2025,'Enero','cumplio'),
 (1,2025,'Febrero','cumplio'),
 (1,2025,'Marzo','cumplio'),
@@ -2678,6 +2677,3 @@ INSERT INTO compliances (ente_id, year, month, status) VALUES
 INSERT IGNORE INTO entes_activos (ente_id, year)
 SELECT DISTINCT ente_id, year FROM compliances;
 
--- Índices (opcionales)
-CREATE INDEX IF NOT EXISTS idx_compliances_year_month ON compliances(year, month);
-CREATE INDEX IF NOT EXISTS idx_entes_classification ON entes(classification_id);

@@ -882,8 +882,8 @@ const computeICForEnteYear = (ente, y) => {
                 <div key={r.id} className={`list-group-item ${styles.listGroupItem}`}>
                   <div className={styles.listGroupImage}><img src={r.img} alt={r.title} style={{maxWidth:88,maxHeight:88}} onError={(e) => {e.target.style.display = 'none';}}/></div>
                   <div className={styles.listGroupContent}>
-                    <h5 className={`mb-1 ${styles.listGroupTitle}`}>{r.title}</h5>
-                    <p className="mb-1"><small className="text-white px-2 py-1 rounded" style={{background:'linear-gradient(to right,#681b32,#200b07)'}}>{r.classification}</small></p>
+                    <h5 className={`mb-1 ${styles.listGroupTitle}`} style={{fontWeight: 700, color: '#440D1E'}}>{r.title}</h5>
+                    <p className="mb-1"><small style={{fontSize: 14, color: '#6c757d'}}>{r.classification}</small></p>
                     <div className={styles.listGroupBadges}>
                       {r.compliances.filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
                         .map((c, i) => {

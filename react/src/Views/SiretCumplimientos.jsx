@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from '../assets/asebcs.jpg';
 import Toast from '../Components/Toast';
+import * as XLSX from 'xlsx';
 
 export default function SiretCumplimientos(){
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -11,7 +13,7 @@ export default function SiretCumplimientos(){
 
   const [filterEnte, setFilterEnte] = useState('');
   const [filterClasificacion, setFilterClasificacion] = useState('');
-  const [filterYear, setFilterYear] = useState('');
+  const [filterYear, setFilterYear] = useLocalStorage('siretCumplimientos_filterYear', '');
 
   useEffect(()=>{
     const load = async () => {
@@ -27,16 +29,21 @@ export default function SiretCumplimientos(){
         setCompliances(Array.isArray(cJson) ? cJson : []);
         setEntes(Array.isArray(eJson) ? eJson : []);
         setClasificaciones(Array.isArray(clJson) ? clJson : []);
-        // default year = max year found in compliances
-        const years = (Array.isArray(cJson) ? cJson.map(r=>Number(r.year)).filter(Boolean) : []);
-        const maxYear = years.length ? Math.max(...years) : new Date().getFullYear();
-        setFilterYear(String(maxYear));
       } catch(err){
         console.error(err);
       } finally { setLoading(false); }
     };
     load();
   }, []);
+
+  // Establecer año por defecto solo si no hay uno guardado
+  useEffect(() => {
+    if (!filterYear && compliances.length > 0) {
+      const years = compliances.map(r=>Number(r.year)).filter(Boolean);
+      const maxYear = years.length ? Math.max(...years) : new Date().getFullYear();
+      setFilterYear(String(maxYear));
+    }
+  }, [compliances, filterYear, setFilterYear]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,9 +66,9 @@ export default function SiretCumplimientos(){
 
   const [viewMode, setViewMode] = useState('añadir'); // 'añadir' | 'editar' | 'importar'
 
-  const [editEnteQuery, setEditEnteQuery] = useState('');
+  const [editEnteQuery, setEditEnteQuery] = useLocalStorage('siretCumplimientos_editEnteQuery', '');
   const [editSelectedEnteId, setEditSelectedEnteId] = useState(null);
-  const [editClasifFilter, setEditClasifFilter] = useState('Todos');
+  const [editClasifFilter, setEditClasifFilter] = useLocalStorage('siretCumplimientos_editClasifFilter', 'Todos');
   const [editingEnte, setEditingEnte] = useState(null);
   const [tempCompliances, setTempCompliances] = useState({});
   const [toast, setToast] = useState(null);
@@ -77,17 +84,17 @@ export default function SiretCumplimientos(){
   const [showEntesModal, setShowEntesModal] = useState(false);
   const [entesModalYear, setEntesModalYear] = useState(null);
   const [entesActivosByYear, setEntesActivosByYear] = useState({}); // { '2025': Set([1,2]) }
-  const [entesModalSearchName, setEntesModalSearchName] = useState('');
-  const [entesModalClasif, setEntesModalClasif] = useState('Todos');
-  const [entesModalFilter, setEntesModalFilter] = useState('todos'); // 'todos' | 'activos' | 'desactivados'
+  const [entesModalSearchName, setEntesModalSearchName] = useLocalStorage('siretCumplimientos_entesModalSearchName', '');
+  const [entesModalClasif, setEntesModalClasif] = useLocalStorage('siretCumplimientos_entesModalClasif', 'Todos');
+  const [entesModalFilter, setEntesModalFilter] = useLocalStorage('siretCumplimientos_entesModalFilter', 'todos'); // 'todos' | 'activos' | 'desactivados'
   const [loadingEnteId, setLoadingEnteId] = useState(null); // ID del ente que se está procesando
 
   // Modal "Captura por Mes" - guardar cumplimientos
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [monthModalYear, setMonthModalYear] = useState(null);
   const [monthModalMonth, setMonthModalMonth] = useState('');
-  const [monthModalSearchName, setMonthModalSearchName] = useState('');
-  const [monthModalClasif, setMonthModalClasif] = useState('Todos');
+  const [monthModalSearchName, setMonthModalSearchName] = useLocalStorage('siretCumplimientos_monthModalSearchName', '');
+  const [monthModalClasif, setMonthModalClasif] = useLocalStorage('siretCumplimientos_monthModalClasif', 'Todos');
   const [monthModalTemp, setMonthModalTemp] = useState({}); // { ente_id: status }
   const [monthModalSaving, setMonthModalSaving] = useState(false);
   const [monthModalReadOnly, setMonthModalReadOnly] = useState(false);
@@ -129,9 +136,6 @@ export default function SiretCumplimientos(){
     closeModalWithAnimation('entes', () => {
       setShowEntesModal(false);
       setEntesModalYear(null);
-      setEntesModalSearchName('');
-      setEntesModalClasif('Todos');
-      setEntesModalFilter('todos');
     });
   };
 
@@ -140,8 +144,6 @@ export default function SiretCumplimientos(){
       setShowMonthModal(false);
       setMonthModalYear(null);
       setMonthModalMonth('');
-      setMonthModalSearchName('');
-      setMonthModalClasif('Todos');
       setMonthModalTemp({});
     });
   };
@@ -244,16 +246,11 @@ export default function SiretCumplimientos(){
 
   const openEntesModal = (year) => {
     setEntesModalYear(String(year));
-    setEntesModalSearchName('');
-    setEntesModalClasif('Todos');
-    setEntesModalFilter('todos');
     setShowEntesModal(true);
   };
   const openMonthModal = (year, month, readOnly = false) => {
     setMonthModalYear(String(year));
     setMonthModalMonth(month);
-    setMonthModalSearchName('');
-    setMonthModalClasif('Todos');
     setMonthModalTemp({});
     setShowMonthModal(true);
     setMonthModalReadOnly(readOnly);
@@ -406,6 +403,111 @@ export default function SiretCumplimientos(){
     const ic = greenPercent;
 
     return { ic, greenPercent, yellowPercent, redPercent };
+  };
+
+  const downloadExcel = () => {
+    const currentActivesSet = entesActivosByYear[String(monthModalYear)] || new Set();
+    const statusByEnte = new Map();
+    compliances.forEach(c => {
+      if (String(c.year) === String(monthModalYear) && String(c.month) === String(monthModalMonth)) {
+        statusByEnte.set(Number(c.ente_id), (c.status || '').toLowerCase());
+      }
+    });
+
+    const filtered = (entes || [])
+      .filter(e => currentActivesSet.has(Number(e.id)))
+      .filter(e => !monthModalSearchName || (e.title || '').toLowerCase().includes(monthModalSearchName.toLowerCase()))
+      .filter(e => monthModalClasif === 'Todos' || (e.classification || '') === monthModalClasif)
+      .sort((a,b) => {
+        const ca = (a.classification || '').localeCompare(b.classification || '');
+        if (ca !== 0) return ca;
+        return (a.title || '').localeCompare(b.title || '');
+      });
+
+    // Mapa de estados a números
+    const statusMap = {
+      'cumplio': 1,
+      'parcial': 2,
+      'no': 3
+    };
+
+    // Construir datos para el Excel
+    const data = [
+      [`Año: ${monthModalYear}`, `Mes: ${monthModalMonth}`],
+      [],
+      ['Leyenda'],
+      ['1: Cumplió'],
+      ['2: No cumplió'],
+      ['3: No presentó'],
+      [],
+      ['Ente', 'Clasificación', 'Estado']
+    ];
+
+    // Agregar datos de los entes
+    filtered.forEach(e => {
+      const enteId = Number(e.id);
+      // Usar datos temporales si existen, sino usar los datos guardados originales
+      const tempStatus = monthModalTemp[enteId];
+      const current = tempStatus !== undefined ? tempStatus : (statusByEnte.get(enteId) || '');
+      const statusCode = current ? statusMap[current] : '';
+      data.push([
+        e.title || '',
+        e.classification || 'Sin clasificación',
+        statusCode || ''
+      ]);
+    });
+
+    // Crear workbook y worksheet
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Estilos de columnas
+    ws['!cols'] = [
+      { wch: 104 },  // Ente
+      { wch: 25 },  // Clasificación
+      { wch: 12 }   // Estado
+    ];
+
+    // Definir bordes
+    const border = {
+      top: { style: 'fine', color: { rgb: 'FF0000' } },
+      bottom: { style: 'thin', color: { rgb: 'FF0000' } },
+      left: { style: 'thin', color: { rgb: 'FF0000' } },
+      right: { style: 'thin', color: { rgb: 'FF0000' } }
+    };
+
+    // Aplicar estilos a todas las celdas con datos
+    for (let R = 0; R < data.length; R++) {
+      for (let C = 0; C < 3; C++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) ws[cellAddress] = {};
+
+        // Agregar bordes a todas las celdas
+        if (typeof ws[cellAddress] === 'object') {
+          ws[cellAddress].s = ws[cellAddress].s || {};
+          ws[cellAddress].s.border = border;
+        }
+
+        // Color de fondo solo para la columna de estado (C=2) en las filas de datos (R >= 7)
+        if (C === 2 && R >= 7) {
+          ws[cellAddress].s = ws[cellAddress].s || {};
+          ws[cellAddress].s.fill = { fgColor: { rgb: 'D3D3D3' } }; // Gris claro
+          ws[cellAddress].s.border = border;
+        }
+
+        // Header (fila 7: Ente, Clasificación, Estado)
+        if (R === 7) {
+          ws[cellAddress].s = ws[cellAddress].s || {};
+          ws[cellAddress].s.font = { bold: true };
+          ws[cellAddress].s.fill = { fgColor: { rgb: 'E8E8E8' } };
+        }
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cumplimientos');
+
+    // Descargar
+    XLSX.writeFile(wb, `CumplimientosIMPORTAR_${monthModalYear}_${monthModalMonth}.xlsx`);
   };
 
   // Marcar años completados (excepto el más reciente) cuando cargan datos
@@ -1110,7 +1212,7 @@ export default function SiretCumplimientos(){
                   </div>
                 </button>
                 <div className="collapse" id={collapseId}>
-                  <div className="card card-body" style={{ border: 'none', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: 8 }}>
+                  <div className="card card-body" style={{ backgroundColor: '#FCFCFC', border: 'none', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: 8 }}>
                     {(() => {
                       const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
                       const stagedMonths = addedMonthsByYear[year] || [];
@@ -1126,7 +1228,7 @@ export default function SiretCumplimientos(){
 
                       return (
                         <>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: windowWidth < 768 ? 'wrap' : 'nowrap', gap: windowWidth < 768 ? 12 : 0 }}>
+                          <div style={{ display: 'flex', backgroundColor: '#f8f9fa', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: windowWidth < 768 ? 'wrap' : 'nowrap', gap: windowWidth < 768 ? 12 : 0 }}>
                             <h6 style={{ fontWeight: 600, margin: 0, color: '#200b07', display: 'flex', alignItems: 'center', gap: 8, width: windowWidth < 768 ? '100%' : 'auto' }}>
                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
@@ -1849,10 +1951,198 @@ export default function SiretCumplimientos(){
                   {windowWidth < 426 ? '' : (windowWidth < 360 ? 'Eliminar' : 'Eliminar mes')}
                 </button>
               )}
+
+
             </div>
 
             {/* Body */}
             <div style={{ padding: 20, background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)', overflowY: 'auto' }}>
+              {/* Botones de Acciones */}
+              <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+
+                {/* Botones de Exportar e Importar */}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={downloadExcel}
+                    title="Descargar datos en Excel"
+                    style={{
+                      background: 'linear-gradient(135deg, #28a745 0%, #1e7e34 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(40,167,69,0.3)',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(40,167,69,0.4)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(40,167,69,0.3)'; }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                      <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                      <path d="M4.5 7a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0v-6a.5.5 0 0 1 .5-.5z"/>
+                    </svg>
+                    Exportar
+                  </button>
+
+                  <input
+                    ref={(input) => { window.importExcelInput = input; }}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      try {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        // Validar que el año y mes coincidan
+                        const firstRow = data[0];
+                        if (!firstRow || firstRow.length < 2) {
+                          setToast({ message: 'Error: El archivo no tiene el formato correcto', type: 'error' });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        // Obtener año y mes de las dos primeras celdas
+                        const cell1 = String(firstRow[0] || '').trim(); // "Año: 2025"
+                        const cell2 = String(firstRow[1] || '').trim(); // "Mes: Febrero"
+
+                        // Extraer año (números de 4 dígitos)
+                        const yearMatch = cell1.match(/\d{4}/);
+                        const fileYear = yearMatch ? yearMatch[0] : null;
+
+                        // Extraer mes (texto con formato "Mes: NombreMes")
+                        const monthMatch = cell2.match(/:\s*(\w+)/);
+                        const fileMonth = monthMatch ? monthMatch[1] : null;
+
+                        const currentYear = String(monthModalYear);
+                        const currentMonth = monthModalMonth;
+
+                        // Validar que se extrajeron correctamente
+                        if (!fileYear || !fileMonth) {
+                          setToast({ message: `Error: No se pudo leer el año (${fileYear}) o mes (${fileMonth}) del archivo`, type: 'error' });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        // Comparar
+                        if (fileYear !== currentYear || fileMonth !== currentMonth) {
+                          setToast({ message: `Error: El archivo es de ${fileMonth} ${fileYear}, necesitas importar para ${currentMonth} ${currentYear}`, type: 'error' });
+                          e.target.value = '';
+                          return;
+                        }
+
+                        // El mapeo inverso de estados
+                        const statusMapInverse = {
+                          '1': 'cumplio',
+                          '2': 'parcial',
+                          '3': 'no',
+                          1: 'cumplio',
+                          2: 'parcial',
+                          3: 'no'
+                        };
+
+                        const importedData = {};
+
+                        // Buscar el inicio de los datos (después del encabezado)
+                        let dataStartRow = 0;
+                        for (let i = 0; i < data.length; i++) {
+                          if (data[i][0] === 'Ente') {
+                            dataStartRow = i + 1;
+                            break;
+                          }
+                        }
+
+                        // Procesar las filas de datos
+                        for (let i = dataStartRow; i < data.length; i++) {
+                          const row = data[i];
+                          if (!row[0] || row[0] === 'Leyenda:' || row[0] === '1' || row[0] === '2' || row[0] === '3') {
+                            break; // Fin de los datos
+                          }
+
+                          const enteName = String(row[0] || '').trim();
+                          const statusValue = row[2]; // Puede ser número o string
+
+                          // Solo procesar si hay un valor de estado
+                          if (statusValue === undefined || statusValue === null || statusValue === '') {
+                            continue;
+                          }
+
+                          const statusCode = String(statusValue).trim();
+
+                          // Buscar el ente por nombre
+                          const ente = entes.find(e => (e.title || '').trim() === enteName);
+                          if (ente) {
+                            // Intentar mapear primero por string, luego por número
+                            let mappedStatus = statusMapInverse[statusCode];
+                            if (!mappedStatus) {
+                              mappedStatus = statusMapInverse[parseInt(statusCode, 10)];
+                            }
+                            if (mappedStatus) {
+                              importedData[Number(ente.id)] = mappedStatus;
+                            }
+                          }
+                        }
+
+                        // Log para debug
+                        console.log('Datos importados:', importedData);
+
+                        // Actualizar el estado temporal
+                        setMonthModalTemp(prev => ({ ...prev, ...importedData }));
+                        setToast({ message: `Se importaron ${Object.keys(importedData).length} entes correctamente`, type: 'success' });
+
+                        // Limpiar el input
+                        e.target.value = '';
+                      } catch (err) {
+                        console.error(err);
+                        setToast({ message: 'Error al importar el archivo Excel', type: 'error' });
+                      }
+                    }}
+                  />
+
+                  <button
+                    onClick={() => window.importExcelInput?.click()}
+                    title="Importar datos desde Excel"
+                    style={{
+                      background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,123,255,0.3)',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,123,255,0.4)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,123,255,0.3)'; }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 11a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V10.5a.5.5 0 0 0 .5.5z"/>
+                      <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                    </svg>
+                    Importar
+                  </button>
+                </div>
+              </div>
+
               <table className="table table-sm" style={{ borderCollapse: 'collapse', background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff' }}>
@@ -1891,10 +2181,11 @@ export default function SiretCumplimientos(){
                     return filtered.map((e) => {
                       const enteId = Number(e.id);
                       const original = statusByEnte.get(enteId) || '';
-                      const current = monthModalTemp[enteId] ?? original;
+                      const tempValue = monthModalTemp[enteId];
+                      const current = (tempValue !== undefined && tempValue !== null) ? tempValue : original;
 
                       return (
-                        <tr key={enteId} style={{ transition: 'background 0.2s ease' }} onMouseEnter={(ev) => ev.currentTarget.style.background = '#f8f9fa'} onMouseLeave={(ev) => ev.currentTarget.style.background = '#fff'}>
+                        <tr key={enteId} data-ente-id={enteId} style={{ transition: 'background 0.2s ease' }} onMouseEnter={(ev) => ev.currentTarget.style.background = '#f8f9fa'} onMouseLeave={(ev) => ev.currentTarget.style.background = '#fff'}>
                           <td style={{ padding: '14px 16px', borderBottom: '1px solid #e9ecef' }}>
                             <div>
                               <div style={{ fontWeight: 600 }}>{e.title}</div>
@@ -1936,24 +2227,76 @@ export default function SiretCumplimientos(){
             {/* Footer */}
             <div style={{ padding: 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                {windowWidth >= 430 && (() => {
-                  const stats = calculateMonthStats(monthModalYear, monthModalMonth);
+                {(() => {
+                  const currentActivesSet = entesActivosByYear[String(monthModalYear)] || new Set();
+                  const statusByEnte = new Map();
+                  compliances.forEach(c => {
+                    if (String(c.year) === String(monthModalYear) && String(c.month) === String(monthModalMonth)) {
+                      statusByEnte.set(Number(c.ente_id), (c.status || '').toLowerCase());
+                    }
+                  });
+
+                  const filtered = (entes || [])
+                    .filter(e => currentActivesSet.has(Number(e.id)))
+                    .filter(e => !monthModalSearchName || (e.title || '').toLowerCase().includes(monthModalSearchName.toLowerCase()))
+                    .filter(e => monthModalClasif === 'Todos' || (e.classification || '') === monthModalClasif)
+                    .sort((a,b) => {
+                      const ca = (a.classification || '').localeCompare(b.classification || '');
+                      if (ca !== 0) return ca;
+                      return (a.title || '').localeCompare(b.title || '');
+                    });
+
+                  const missing = filtered.filter(e => {
+                    const enteId = Number(e.id);
+                    const original = statusByEnte.get(enteId) || '';
+                    const tempValue = monthModalTemp[enteId];
+                    const current = (tempValue !== undefined && tempValue !== null) ? tempValue : original;
+                    return !current;
+                  });
+
+                  const firstMissingEnte = missing.length > 0 ? missing[0] : null;
+
                   return (
-                    <>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#200b07', background: '#e9ecef', padding: '6px 12px', borderRadius: 8 }}>
-                        IC: {stats.ic}%
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: '#28a745', padding: '6px 10px', borderRadius: 8 }}>
-                        Cumplió: {stats.greenPercent}%
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#000', background: '#ffc107', padding: '6px 10px', borderRadius: 8 }}>
-                        No cumplió: {stats.yellowPercent}%
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: '#dc3545', padding: '6px 10px', borderRadius: 8 }}>
-                        No presentó: {stats.redPercent}%
-                      </span>
-                    </>
+                    <button
+                      onClick={() => {
+                        if (firstMissingEnte) {
+                          const elem = document.querySelector(`[data-ente-id="${firstMissingEnte.id}"]`);
+                          if (elem) {
+                            elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            elem.style.background = '#fff3cd';
+                            setTimeout(() => { elem.style.background = '#fff'; }, 2000);
+                          }
+                        }
+                      }}
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: missing.length > 0 ? '#dc3545' : '#28a745',
+                        background: missing.length > 0 ? '#f8d7da' : '#d4edda',
+                        padding: '8px 16px',
+                        borderRadius: 8,
+                        border: `2px solid ${missing.length > 0 ? '#dc3545' : '#28a745'}`,
+                        cursor: missing.length > 0 ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (missing.length > 0) {
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 53, 69, 0.3)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      {missing.length > 0
+                        ? `Faltan ${missing.length} ente(s) por asignar cumplimiento`
+                        : '✓ Todos los entes tienen cumplimiento asignado'
+                      }
+                    </button>
                   );
+
                 })()}
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -1995,7 +2338,8 @@ export default function SiretCumplimientos(){
                     const missing = visibleEntes.filter(e => {
                       const enteId = Number(e.id);
                       const original = statusByEnte.get(enteId) || '';
-                      const current = monthModalTemp[enteId] ?? original;
+                      const tempValue = monthModalTemp[enteId];
+                      const current = (tempValue !== undefined && tempValue !== null) ? tempValue : original;
                       return !current;
                     });
                     if (missing.length > 0) {

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from "../assets/asebcs.jpg";
 import {
   ResponsiveContainer,
@@ -26,23 +27,23 @@ export default function Comparativa() {
   const containerRef = React.useRef(null);
 
   const [entesList, setEntesList] = useState([]);
-  const [leftFilterName, setLeftFilterName] = useState('');
-  const [leftFilterClass, setLeftFilterClass] = useState('');
-  const [rightFilterName, setRightFilterName] = useState('');
-  const [rightFilterClass, setRightFilterClass] = useState('');
+  const [leftFilterName, setLeftFilterName] = useLocalStorage('comparativa_leftFilterName', '');
+  const [leftFilterClass, setLeftFilterClass] = useLocalStorage('comparativa_leftFilterClass', '');
+  const [rightFilterName, setRightFilterName] = useLocalStorage('comparativa_rightFilterName', '');
+  const [rightFilterClass, setRightFilterClass] = useLocalStorage('comparativa_rightFilterClass', '');
 
   const [selectedLeft, setSelectedLeft] = useState(null);
   const [selectedRight, setSelectedRight] = useState(null);
   const [chartYearLeft, setChartYearLeft] = useState('Todos');
   const [chartYearRight, setChartYearRight] = useState('Todos');
-  const [selectedMonthForChart, setSelectedMonthForChart] = useState('Todos');
+  const [selectedMonthForChart, setSelectedMonthForChart] = useLocalStorage('comparativa_monthForChart', 'Todos');
   // default to the most recent up to 3 years
-  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useState(() => years.slice(-3));
+  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useLocalStorage('comparativa_yearsForMonthChart', years.slice(-3));
   // For per-ente comparisons: selected years per side (max 3, min 1)
-  const [selectedYearsLeft, setSelectedYearsLeft] = useState([]);
-  const [selectedYearsRight, setSelectedYearsRight] = useState([]);
+  const [selectedYearsLeft, setSelectedYearsLeft] = useLocalStorage('comparativa_yearsLeft', []);
+  const [selectedYearsRight, setSelectedYearsRight] = useLocalStorage('comparativa_yearsRight', []);
   // For month/year chart: selected months (checkboxes 1..12). Empty means all.
-  const [selectedMonthsForChart, setSelectedMonthsForChart] = useState(() => []);
+  const [selectedMonthsForChart, setSelectedMonthsForChart] = useLocalStorage('comparativa_monthsForChart', []);
 
   const entesListFallback = [
     { id: 1, title: 'Municipio de La Paz', classification: 'Municipios', compliances: [{ year:2025, month:'Enero', status:'cumplio'}] },

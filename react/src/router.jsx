@@ -27,9 +27,12 @@ import ExportPDFMes from "./Views/ExportPDFMes";
 import ExportPDFEnte from "./Views/ExportPDFEnte";
 import ExportPDFCom from "./Views/ExportPDFCom";
 import ExportExcel from "./Views/ExportExcel";
-import ExportExcelMes from "./Views/ExportExcelCom";
+import ExportExcelMes from "./Views/ExportExcelMes";
 import ExportExcelEnte from "./Views/ExportExcelEnte";
 import ExportExcelCom from "./Views/ExportExcelCom";
+import ExportPDFEnteCom from "./Views/ExportPDFEnteCom";
+import ExportExcelEnteCom from "./Views/ExportExcelEnteCom";
+
 
 const router = createBrowserRouter([
   {
@@ -72,7 +75,9 @@ const router = createBrowserRouter([
       { path: "/ExportExcel", element: <ExportExcel /> },
       { path: "/ExportExcelMes", element: <ExportExcelMes /> },
       { path: "/ExportExcelEnte", element: <ExportExcelEnte /> },
-      { path: "/ExportExcelCom", element: <ExportExcelCom /> }
+      { path: "/ExportExcelCom", element: <ExportExcelCom /> },
+      { path: "/ExportPDFEnteCom", element: <ExportPDFEnteCom /> },
+      { path: "/ExportExcelEnteCom", element: <ExportExcelEnteCom /> }
 
     ],
   },

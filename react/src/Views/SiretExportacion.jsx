@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Label, PieChart, Pie, Cell } from 'recharts';
 import ASEBCS from '../assets/asebcs.jpg';
 import Comparativa from './SiretComparativa';
@@ -102,13 +103,13 @@ export default function SiretExportacion(){
   const [clasificaciones, setClasificaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('años');
-  const [entesSearch, setEntesSearch] = useState('');
-  const [entesClasifFilter, setEntesClasifFilter] = useState('Todos');
+  const [entesSearch, setEntesSearch] = useLocalStorage('siretExportacion_entesSearch', '');
+  const [entesClasifFilter, setEntesClasifFilter] = useLocalStorage('siretExportacion_entesClasifFilter', 'Todos');
   const [selectedEnte, setSelectedEnte] = useState(null);
   const [enteExportYear, setEnteExportYear] = useState("");
   const [enteExportMonth, setEnteExportMonth] = useState("");
   const [activeSection, setActiveSection] = useState('indicadores');
-  const [enabledYears, setEnabledYears] = useState({});
+  const [enabledYears, setEnabledYears] = useLocalStorage('siretExportacion_enabledYears', {});
   const [displayYears, setDisplayYears] = useState([]);
   const [addedMonthsByYear, setAddedMonthsByYear] = useState({});
   const [completedYears, setCompletedYears] = useState(new Set());
@@ -120,8 +121,8 @@ export default function SiretExportacion(){
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [monthModalYear, setMonthModalYear] = useState(null);
   const [monthModalMonth, setMonthModalMonth] = useState(null);
-  const [monthModalSearchName, setMonthModalSearchName] = useState('');
-  const [monthModalClasif, setMonthModalClasif] = useState('');
+  const [monthModalSearchName, setMonthModalSearchName] = useLocalStorage('siretExportacion_monthModalSearchName', '');
+  const [monthModalClasif, setMonthModalClasif] = useLocalStorage('siretExportacion_monthModalClasif', '');
 
   // Estado para animación de cierre de modales
   const [closingModalIndex, setClosingModalIndex] = useState(null);
@@ -149,8 +150,6 @@ export default function SiretExportacion(){
       setShowMonthModal(false);
       setMonthModalYear(null);
       setMonthModalMonth(null);
-      setMonthModalSearchName('');
-      setMonthModalClasif('');
       try { document.body.style.overflow = ''; } catch (e) {}
     });
   };
@@ -300,9 +299,14 @@ export default function SiretExportacion(){
       compliances: compliances.filter(c => Number(c.ente_id) === Number(ente.id))
     };
     const yearsArr = Array.from(new Set(enriched.compliances.map(c => c.year))).sort((a,b)=>b-a);
-    const defaults = {};
-    yearsArr.forEach((y, idx) => { defaults[y] = idx < 3; });
-    setEnabledYears(defaults);
+
+    // Solo establecer los primeros 3 años si enabledYears está vacío (primera vez que se abre)
+    if (Object.keys(enabledYears).length === 0) {
+      const defaults = {};
+      yearsArr.forEach((y, idx) => { defaults[y] = idx < 3; });
+      setEnabledYears(defaults);
+    }
+
     setActiveSection('graficas');
     setSelectedEnte(enriched);
 
@@ -323,7 +327,6 @@ export default function SiretExportacion(){
   const closeEnteModal = () => {
     closeModalWithAnimation('selectedEnte', () => {
       setSelectedEnte(null);
-      setEnabledYears({});
       setActiveSection('indicadores');
       try { document.body.style.overflow = ''; } catch (e) {}
     });
@@ -419,8 +422,6 @@ export default function SiretExportacion(){
   const openMonthModal = (year, month) => {
     setMonthModalYear(String(year));
     setMonthModalMonth(month);
-    setMonthModalSearchName('');
-    setMonthModalClasif('');
     setShowMonthModal(true);
     try { document.body.style.overflow = 'hidden'; } catch (e) {}
   };
@@ -795,7 +796,7 @@ export default function SiretExportacion(){
                 </div>
               </button>
               <div className="collapse" id={collapseId}>
-                <div className="card card-body" style={{ border: 'none', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: 8 }}>
+                <div className="card card-body" style={{ backgroundColor: '#FCFCFC', border: 'none', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: 8 }}>
                   {(() => {
                     const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
                     const stagedMonths = addedMonthsByYear[year] || [];
@@ -809,7 +810,7 @@ export default function SiretExportacion(){
                     displayMonths.sort((a,b) => monthsOrder.indexOf(a) - monthsOrder.indexOf(b));
                     return (
                       <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <div style={{ backgroundColor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                           <h6 style={{ fontWeight: 600, margin: 0, color: '#200b07', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                               <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>

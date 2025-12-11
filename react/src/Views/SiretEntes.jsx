@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from "../assets/asebcs.jpg";
 import Toast from "../Components/Toast";
 
@@ -31,9 +32,9 @@ export default function SiretEntes() {
   const [newClassification, setNewClassification] = useState('');
 
   // Filters for the catalog
-  const [enteQuery, setEnteQuery] = useState("");
+  const [enteQuery, setEnteQuery] = useLocalStorage('siretEntes_enteQuery', "");
   const [selectedEnteId, setSelectedEnteId] = useState(null);
-  const [filterClasif, setFilterClasif] = useState('Todos');
+  const [filterClasif, setFilterClasif] = useLocalStorage('siretEntes_filterClasif', 'Todos');
 
   // Estado para animación de cierre de modales
   const [closingModalIndex, setClosingModalIndex] = useState(null);
@@ -614,7 +615,7 @@ export default function SiretEntes() {
               </h4>
             </div>
             <div style={{ padding: '24px' }}>
-              <p style={{ margin: 0, fontSize: 15, color: '#2c3e50' }}>¿Estás seguro de que deseas eliminar el ente <strong style={{ color: '#681b32' }}>{toDelete.title}</strong>?</p>
+              <p style={{ margin: 0, fontSize: 15, color: '#2c3e50' }}>¿Estás seguro de que deseas eliminar el ente <strong style={{ color: '#681b32' }}>{toDelete.title}</strong>? Se eliminarán <strong style={{ color: '#000000' }}>TODOS</strong> los cumplimientos del ente</p>
             </div>
             <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background:'#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
               <button className="btn" onClick={closeDeleteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>
