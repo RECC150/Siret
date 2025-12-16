@@ -22,13 +22,13 @@ CREATE TABLE IF NOT EXISTS entes (
 -- Tabla de cumplimientos (por mes/año)
 CREATE TABLE IF NOT EXISTS compliances (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  ente INT NOT NULL,
+  ente_id INT NOT NULL,
   year SMALLINT NOT NULL,
   month VARCHAR(20) NOT NULL,
-  status VARCHAR(30) NOT NULL, -- 'cumplio' | 'parcial' | 'no'
+  status VARCHAR(30) NOT NULL,
   note TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (ente) REFERENCES entes(id) ON DELETE CASCADE
+  FOREIGN KEY (ente_id) REFERENCES entes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Tabla de entes activos (relación ente/año)
