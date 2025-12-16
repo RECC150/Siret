@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
-    $db = new PDO('mysql:host=api.siret-graficas-interactivas.sifbcs.online;dbname=u351010311_siret;charset=utf8mb4', 'u351010311_siretASEBCS', 'L>yD8P*2');
+    $db = new PDO('mysql:host=localhost;dbname=u351010311_siret;charset=utf8mb4', 'u351010311_siretASEBCS', 'L>yD8P*2');
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     $input = json_decode(file_get_contents('php://input'), true);

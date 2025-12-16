@@ -2,7 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$host = 'api.siret-graficas-interactivas.sifbcs.online';
+$host = 'localhost';
 $db   = 'u351010311_siret';
 $user = 'u351010311_siretASEBCS';
 $pass = 'L>yD8P*2';

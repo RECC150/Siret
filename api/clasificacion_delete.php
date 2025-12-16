@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$host = 'api.siret-graficas-interactivas.sifbcs.online';
+$host = 'localhost';
 $db   = 'u351010311_siret';
 $user = 'u351010311_siretASEBCS';
 $pass = 'L>yD8P*2';
