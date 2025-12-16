@@ -19,7 +19,7 @@ export default function SiretCumplimientos(){
     const load = async () => {
       setLoading(true);
       try {
-        const base = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+        const base = apiBase;
         const [cRes, eRes, clRes] = await Promise.all([
           fetch(base + '/compliances.php'),
           fetch(base + '/entes.php'),
@@ -114,7 +114,7 @@ export default function SiretCumplimientos(){
   const [importLog, setImportLog] = useState([]);
 
   // Base API (reutilizable)
-  const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
   // Funciones helper para cerrar modales con animación
   const closeModalWithAnimation = (modalIndex, callback) => {
@@ -2636,7 +2636,7 @@ export default function SiretCumplimientos(){
                 </button>
                 <button className="btn" onClick={async ()=>{
                 try {
-                  const base = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+                  const base = apiBase;
                   const updates = [];
 
                   for (const key in tempCompliances) {

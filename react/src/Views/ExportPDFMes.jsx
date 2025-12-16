@@ -23,7 +23,7 @@ export default function SiretExportPDFMes(){
   const [pdfUrl, setPdfUrl] = useState(null);
   const [progress, setProgress] = useState(0); // progreso de generación estilo anual
 
-  const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
   const sidebarWidth = 260;
   const containerStyle = {

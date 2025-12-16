@@ -24,7 +24,9 @@ export default function SiretExportExcel(){
     const [sidebarVisible, setSidebarVisible] = useState(true);
     const [generando, setGenerando] = useState(false);
 
-    const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;	useEffect(() => {
+	const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+	useEffect(() => {
 		if (!year) return;
 		const load = async () => {
 			setLoading(true); setError(null);

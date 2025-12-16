@@ -127,7 +127,7 @@ export default function SiretExportacion(){
   // Estado para animación de cierre de modales
   const [closingModalIndex, setClosingModalIndex] = useState(null);
 
-  const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
   // Funciones helper para cerrar modales con animación
   const closeModalWithAnimation = (modalIndex, callback) => {

@@ -78,7 +78,7 @@ export default function Comparativa() {
 
   useEffect(() => {
     let mounted = true;
-    const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/entes.php`;
+    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes.php`;
     fetch(apiUrl)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(json => { if (!mounted) return; if (Array.isArray(json)) setEntesList(json); else setEntesList(entesListFallback); })

@@ -45,13 +45,15 @@ export default function Inicio() {
   React.useEffect(() => {
     const fetchEntes = async () => {
       try {
-        const response = await fetch('http://localhost/siret/api/entes.php');
+        const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+        const response = await fetch(`${apiBase}/entes.php`);
         const data = await response.json();
-        setEntes(data);
+        setEntes(Array.isArray(data) ? data : []);
         setLoading(false);
       } catch (error) {
         console.error('Error cargando entes:', error);
         toast.error('Error al cargar los entes');
+        setEntes([]);
         setLoading(false);
       }
     };
@@ -149,7 +151,7 @@ export default function Inicio() {
   };
 
   // Agrupar entes por clasificación y ordenar por id
-  const grouped = entes
+  const grouped = (Array.isArray(entes) ? entes : [])
     .slice()
     .sort((a, b) => a.id - b.id)
     .reduce((acc, ente) => {

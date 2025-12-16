@@ -83,7 +83,7 @@ export default function SiretEntes() {
   // Load classifications from API
   const fetchClasificaciones = async () => {
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/clasificaciones.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificaciones.php`;
       const res = await fetch(apiUrl);
       if (res.ok) {
         const json = await res.json();
@@ -96,7 +96,7 @@ export default function SiretEntes() {
   const fetchEntes = async () => {
     setLoading(true);
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/entes.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes.php`;
       const res = await fetch(apiUrl);
       if (!res.ok) throw new Error("no-api");
       const json = await res.json();
@@ -131,7 +131,7 @@ export default function SiretEntes() {
     }
 
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/ente_update.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/ente_update.php`;
       const form = new FormData();
       form.append('id', editEnte.id);
       form.append('title', title);
@@ -176,7 +176,7 @@ export default function SiretEntes() {
     }
 
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/ente_create.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/ente_create.php`;
       const form = new FormData();
       form.append('title', title);
       if (classification) form.append('classification', classification);
@@ -206,7 +206,7 @@ export default function SiretEntes() {
   const softDelete = async () => {
     if (!toDelete) return;
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/ente_delete.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/ente_delete.php`;
       const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: toDelete.id }) });
       const json = await res.json();
 

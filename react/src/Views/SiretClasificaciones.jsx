@@ -53,7 +53,7 @@ export default function SiretClasificaciones() {
   const fetchClasificaciones = async () => {
     setLoading(true);
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/clasificaciones.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificaciones.php`;
       const res = await fetch(apiUrl);
       if (!res.ok) throw new Error('no-api');
       const json = await res.json();
@@ -84,7 +84,7 @@ export default function SiretClasificaciones() {
       return;
     }
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/clasificacion_create.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificacion_create.php`;
       const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
       const json = await res.json();
 
@@ -110,7 +110,7 @@ export default function SiretClasificaciones() {
       return;
     }
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/clasificacion_update.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificacion_update.php`;
       const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editItem.id, title }) });
       const json = await res.json();
 
@@ -130,7 +130,7 @@ export default function SiretClasificaciones() {
   const softDelete = async () => {
     if (!toDelete) return;
     try {
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/clasificacion_delete.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificacion_delete.php`;
       const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: toDelete.id }) });
       const json = await res.json();
 

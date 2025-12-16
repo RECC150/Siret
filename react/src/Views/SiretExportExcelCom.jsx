@@ -18,7 +18,7 @@ export default function SiretExportExcel(){
     // UI
     const [sidebarVisible, setSidebarVisible] = useState(true);
 
-    const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+	const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 	useEffect(() => {
 		if (years.length === 0) return;

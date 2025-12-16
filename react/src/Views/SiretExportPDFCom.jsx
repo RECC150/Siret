@@ -19,7 +19,7 @@ export default function SiretExportPDF(){
   const [progress, setProgress] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  const apiBase = `${window.location.protocol}//${window.location.hostname}/siret/api`;
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
   useEffect(() => {
     if (years.length === 0) return;

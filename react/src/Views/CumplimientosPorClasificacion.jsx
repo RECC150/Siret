@@ -492,7 +492,7 @@ export default function CumplimientosMesAnio() {
   useEffect(() => {
     let mounted = true;
     // Usar URL absoluta apuntando a Laragon/Apache (puerto 80)
-    const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/entes.php`;
+    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes.php`;
     fetch(apiUrl)
       .then(res => {
         if (!res.ok) throw new Error('no-api');

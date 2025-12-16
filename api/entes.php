@@ -5,10 +5,10 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$host = '127.0.0.1';
-$db   = 'siret';
-$user = 'root';
-$pass = '';
+$host = 'api.siret-graficas-interactivas.sifbcs.online';
+$db   = 'u351010311_siret';
+$user = 'u351010311_siretASEBCS';
+$pass = 'L>yD8P*2';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
