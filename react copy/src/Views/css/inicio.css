@@ -1,0 +1,413 @@
+
+
+/* Estilo para encabezado principal */
+header {
+  background: linear-gradient(to right, #c56b90, #42160e);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Indicadores visuales */
+.indicador {
+  transition: transform 0.3s ease;
+  border-left: 5px solid #007bff;
+}
+
+.indicador:hover {
+  transform: scale(1.05);
+}
+
+/* Títulos de sección */
+section h2 {
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #343a40;
+}
+
+/* Botones personalizados */
+.btn-primary {
+  background-color: #681b32 !important;
+  border-color: #4d1425 !important;
+  color: #ffffff !important;
+  transition: background-color 220ms ease, border-color 220ms ease, color 180ms ease, box-shadow 220ms ease;
+}
+.btn-primary:hover {
+  background-color: #200b07 !important;
+  border-color: #200b07 !important;
+}
+/* Active (cuando se hace clic o se mantiene presionado) */
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary {
+  background-color: #4d1425 !important; /*!important obliga a colocar un color de manera forsoza*/
+  border-color: #4d1425 !important;
+  color: white !important;
+  box-shadow: none !important;
+}
+
+
+
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #218838;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  border-color: #5a6268;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+/* Footer */
+footer {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive canvas */
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Links en reportes */
+#reportes a {
+  text-decoration: none;
+  color: #007bff;
+}
+#reportes a:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+
+/*Para modificar la imagen de ASEBCS, en este caso ponerle un borde y una sombra apenas visible*/
+.navbar-brand img {
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+
+/*Esto modifica la seccion de: ¿Que es ASEBCS?*/
+.bg-maroon {
+  background: linear-gradient(to right, #681b32, #200b07);
+
+}
+#asebcs h2 {
+  font-weight: bold;
+  color: white;
+}
+#asebcs img {
+  max-height: 300px;
+  object-fit: cover;
+}
+
+
+/*Todo esto es para modificar la parte de los semaforos*/
+:root{
+  --semaforo-collapsed-width: 120px;
+  --semaforo-expanded-width: 300px;
+  --expand-duration: 0.6s;
+}
+
+.semaforo-card {
+  width: 120px;
+  height: 120px;
+  width: var(--semaforo-collapsed-width);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  /* animate only width and padding for smoothness */
+  transition: width var(--expand-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94), padding var(--expand-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94), height var(--expand-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+}
+.semaforo-icon {
+  width: 60px;
+  height: auto;
+  margin-bottom: 10px;
+  transition: transform 0.3s ease;
+}
+
+/* Expanded state: only applied via JS (click -> add .expanded) */
+.semaforo-card.expanded {
+  width: var(--semaforo-expanded-width);
+  height: auto;
+  min-height: 280px;
+  padding: 1.25rem;
+  align-items: center;
+  justify-content: flex-start;
+}
+.semaforo-card.expanded .semaforo-icon {
+  transform: scale(1.06);
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0s;
+}
+
+/* Collapse header styles */
+.collapse-header {
+  background-color: white;
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+}
+.collapse-header:hover {
+  background-color: #eaecee;
+}
+
+/* Texto explicativo */
+.semaforo-info {
+  display: none;
+  text-align: justify;
+}
+
+.semaforo-info {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease-in-out, max-height 0.5s ease-in-out, transform 0.5s ease-in-out;
+}
+
+.semaforo-card.expanded .semaforo-info.show {
+  display: block;
+  opacity: 1;
+  max-height: 480px;
+  transform: translateY(0);
+}
+
+/* Reset native button styles for semaforo buttons and keep focus outline for accessibility */
+.semaforo-card {
+  border: none;
+  background: inherit;
+}
+.semaforo-card:focus {
+  outline: 3px solid rgba(100, 149, 237, 0.4);
+}
+
+
+/*Línea para dividir partes*/
+.linea {
+  border: none;
+  height: 4px;
+  background-color: #c56b90;
+  border-radius: 2px;
+  width: 100%;
+}
+
+
+/*Transicion de los cumplimientos*/
+.btn-magenta {
+  background: linear-gradient(to right, #681b32, #200b07);
+  color: #ffffff !important;
+  font-weight: bold;
+  padding: 15px;
+  border: 2px solid transparent;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  transition: all 0.4s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.btn-magenta:hover {
+  color: white;
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  background: linear-gradient(to right, #42160e, #c56b90);
+}
+.cumplimiento-item .collapse {
+  margin-top: 0;
+}
+/* Cuando el colapso está abierto, mantener el color */
+#indicadoresCollapse.show ~ .btn-magenta,
+.btn-magenta[aria-expanded="true"] {
+  background: linear-gradient(to right, #42160e, #c56b90);
+}
+.cumplimiento-item .card {
+  border-top: none;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.4s ease;
+  background-color: #f8f9fa;
+}
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* The #busqueda focus styles were moved to view-specific CSS (CumplimientosMesAnio.css) */
+
+/* Cuadros (entes) */
+.contenedor-cuadros {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px;
+}
+.cuadro {
+  background: #fff;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  align-items: center;
+  width: 280px;
+  height: 280px;
+  border: 2px solid black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  background-color: white;
+}
+
+.cuadro:hover {
+    transform: scale(1.07);
+    box-shadow: 0 8px 24px rgba(104,27,50,0.18);
+    border-color: #681b32;
+    z-index: 2;
+    transition: transform 0.25s cubic-bezier(.2,.9,.2,1), box-shadow 0.25s cubic-bezier(.2,.9,.2,1), border-color 0.25s;
+}
+
+/* Animated modal for no link */
+.modal-overlay.custom-modal {
+  animation: fadeInModal 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-overlay.custom-modal.closing {
+  animation: fadeOutModalScale 0.28s cubic-bezier(0.68, -0.55, 0.27, 0.55) forwards;
+}
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes fadeOutModalScale {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.88) translateY(-30px);
+  }
+}
+
+.cuadro:focus{ outline: 3px solid rgba(100,149,237,0.35); }
+
+/* Modal */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+}
+.modal-card{
+  background: white;
+  border-radius: 10px;
+  padding: 1.25rem;
+  width: min(720px, 95%);
+  max-height: 90vh;
+  overflow: auto;
+}
+.modal-card header h3{ margin: 0; }
+.modal-body{ display:flex; gap:1rem; align-items:flex-start; margin-top:1rem }
+.modal-body p{ margin:0 }
+.modal-card button[aria-label="Cerrar modal"]{ background:transparent; border:none; font-size:1.25rem; cursor:pointer }
+
+
+/*Estilo para mostrar los entes*/
+
+
+
+/* active state when clicked */
+.cuadro.active {
+  transform: scale(1.06);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.22);
+}
+
+.cuadro img {
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.cuadro h3 {
+  margin: 0;
+  text-align: center;
+  font-size: 16px;
+  color: black;
+  font-family: 'Roboto', sans-serif;
+  line-height: 1.3;
+}
+
+/* Modal animations */
+.modal-overlay {
+  animation: overlayFade 200ms ease forwards;
+}
+.modal-card {
+  transform: scale(.98);
+  opacity: 0;
+  animation: modalPop 260ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+@keyframes overlayFade{
+  from{ background: rgba(0,0,0,0) }
+  to{ background: rgba(0,0,0,0.5) }
+}
+@keyframes modalPop{
+  from{ transform: scale(.98); opacity: 0 }
+  to{ transform: scale(1); opacity: 1 }
+}
+
+/* Closing state: reverse animations */
+.modal-overlay.closing{
+  animation: overlayFadeOut 220ms ease forwards;
+}
+.modal-card.closing{
+  animation: modalPopOut 200ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+@keyframes overlayFadeOut{
+  from{ background: rgba(0,0,0,0.5) }
+  to{ background: rgba(0,0,0,0) }
+}
+@keyframes modalPopOut{
+  from{ transform: scale(1); opacity: 1 }
+  to{ transform: scale(.98); opacity: 0 }
+}
+
+/* Prevent background scroll while modal open */
+.no-scroll{
+  overflow: hidden;
+}
+/* .inactive-modal removed to allow overlay clicks to register */

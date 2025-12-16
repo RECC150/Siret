@@ -19,7 +19,6 @@ export default function Comparativa() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [viewMode, setViewMode] = useState('por-ente'); // 'por-ente' | 'por-mes-anio'
 
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036, 2037];
   const months = [
     'Todos', 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
   ];
@@ -27,18 +26,39 @@ export default function Comparativa() {
   const containerRef = React.useRef(null);
 
   const [entesList, setEntesList] = useState([]);
+  // Años disponibles dinámicos desde la base de datos (entes/compliances)
+  const allYears = useMemo(() => {
+    const s = new Set();
+    (entesList || []).forEach(e => {
+      (e.compliances || []).forEach(c => {
+        if (c.year) s.add(Number(c.year));
+      });
+    });
+    return Array.from(s).sort((a,b)=>a-b);
+  }, [entesList]);
   const [leftFilterName, setLeftFilterName] = useLocalStorage('comparativa_leftFilterName', '');
   const [leftFilterClass, setLeftFilterClass] = useLocalStorage('comparativa_leftFilterClass', '');
   const [rightFilterName, setRightFilterName] = useLocalStorage('comparativa_rightFilterName', '');
   const [rightFilterClass, setRightFilterClass] = useLocalStorage('comparativa_rightFilterClass', '');
 
-  const [selectedLeft, setSelectedLeft] = useState(null);
-  const [selectedRight, setSelectedRight] = useState(null);
+  const [selectedLeft, setSelectedLeft] = useLocalStorage('comparativa_selectedLeft', null);
+  const [selectedRight, setSelectedRight] = useLocalStorage('comparativa_selectedRight', null);
   const [chartYearLeft, setChartYearLeft] = useState('Todos');
   const [chartYearRight, setChartYearRight] = useState('Todos');
   const [selectedMonthForChart, setSelectedMonthForChart] = useLocalStorage('comparativa_monthForChart', 'Todos');
   // default to the most recent up to 3 years
-  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useLocalStorage('comparativa_yearsForMonthChart', years.slice(-3));
+  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useLocalStorage('comparativa_yearsForMonthChart', []);
+
+  // Inicializa selección por defecto a los últimos 3 años disponibles cuando cargan los datos
+  useEffect(() => {
+    if (!allYears || allYears.length === 0) return;
+    setSelectedYearsForMonthChart(prev => {
+      // Si no hay selección previa o contiene años que ya no existen, reestablecer
+      const validPrev = (prev || []).filter(y => allYears.includes(y));
+      if (validPrev.length > 0) return validPrev;
+      return allYears.slice(-3);
+    });
+  }, [allYears]);
   // For per-ente comparisons: selected years per side (max 3, min 1)
   const [selectedYearsLeft, setSelectedYearsLeft] = useLocalStorage('comparativa_yearsLeft', []);
   const [selectedYearsRight, setSelectedYearsRight] = useLocalStorage('comparativa_yearsRight', []);
@@ -305,46 +325,92 @@ export default function Comparativa() {
   const CustomBarTooltip = ({ active, payload, label }) => {
     if (!active || !payload || payload.length === 0) return null;
 
-    const validEntries = payload
-      .filter(entry => entry.value > 0)
-      .map(entry => {
-        const [year, tipo] = entry.dataKey.split('_');
-        return {
-          year,
-          tipo,
-          label: tipoLabels[tipo] || tipo,
-          color: tipoColors[tipo] || '#999',
-        };
-      });
+    // Agrupar datos por ente (left/right) y tipo (cumplio/parcial/no)
+    const entesData = {
+      left: {},
+      right: {},
+    };
+
+    payload.forEach(entry => {
+      if (entry.value > 0) {
+        const dataKey = entry.dataKey; // ej: "left_2025_cumplio" o "right_2025_parcial"
+        const parts = dataKey.split('_');
+        const ente = parts[0]; // 'left' o 'right'
+        const tipo = parts[parts.length - 1]; // 'cumplio', 'parcial', 'no'
+
+        if (!entesData[ente]) entesData[ente] = {};
+        if (!entesData[ente][tipo]) entesData[ente][tipo] = [];
+        entesData[ente][tipo].push(entry.value);
+      }
+    });
 
     return (
       <div
         style={{
           backgroundColor: '#fff',
           border: '1px solid #ccc',
-          padding: '10px',
+          padding: '12px',
           borderRadius: '6px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          transition: 'opacity 0.3s ease',
-          animation: 'fadeIn 0.3s ease',
         }}
       >
-        <strong style={{ display: 'block', marginBottom: '6px' }}>{abbrToFull[label] || (label && label.toString().toUpperCase()) || label}</strong>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {validEntries.map((entry, idx) => (
-            <li
-              key={idx}
-              style={{
-                color: entry.color,
-                fontWeight: 'bold',
-                marginBottom: '4px',
-                transition: 'transform 0.2s ease',
-              }}
-            >
-              {entry.year}: {entry.label}
-            </li>
-          ))}
-        </ul>
+        <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>
+          {abbrToFull[label] || (label && label.toString().charAt(0).toUpperCase() + label.toString().slice(1)) || label}
+        </div>
+
+        {/* Ente 1 */}
+        {(entesData.left.cumplio || entesData.left.parcial || entesData.left.no) && (
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#440D1E', marginBottom: '4px' }}>Ente 1</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px' }}>
+              {entesData.left.cumplio && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', backgroundColor: '#28a745', borderRadius: '2px' }} />
+                  <span>Cumplió</span>
+                </div>
+              )}
+              {entesData.left.parcial && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', backgroundColor: '#ffc107', borderRadius: '2px' }} />
+                  <span>Parcial</span>
+                </div>
+              )}
+              {entesData.left.no && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', backgroundColor: '#dc3545', borderRadius: '2px' }} />
+                  <span>No cumplió</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Ente 2 */}
+        {(entesData.right.cumplio || entesData.right.parcial || entesData.right.no) && (
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#440D1E', marginBottom: '4px' }}>Ente 2</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px' }}>
+              {entesData.right.cumplio && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', backgroundColor: '#28a745', borderRadius: '2px' }} />
+                  <span>Cumplió</span>
+                </div>
+              )}
+              {entesData.right.parcial && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', backgroundColor: '#ffc107', borderRadius: '2px' }} />
+                  <span>Parcial</span>
+                </div>
+              )}
+              {entesData.right.no && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '10px', height: '10px', backgroundColor: '#dc3545', borderRadius: '2px' }} />
+                  <span>No cumplió</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -494,6 +560,53 @@ export default function Comparativa() {
           border-color: #85435e !important;
         }
       `}</style>
+      {/* Navbar */}
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div className="container-fluid">
+          <a className="navbar-brand d-flex align-items-center" href="#">
+            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
+            {/* Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur */}
+            ASEBCS
+          </a>
+          <button
+            className="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigaltion"
+          >
+            <span className="navbar-toggler-icon" />
+          </button>
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav ms-auto">
+              <li className="nav-item">
+                <a className="nav-link" href="/inicio">Inicio</a>
+              </li>
+              <li className="nav-item dropdown">
+                <a
+                  className="nav-link dropdown-toggle active"
+                  href="#"
+                  id="cumplimientosDropdown"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Cumplimientos
+                </a>
+                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="cumplimientosDropdown">
+                  <li><a className="dropdown-item" href="/cumplimientos/mes-anio">Por mes y año</a></li>
+                  <li><a className="dropdown-item" href="/cumplimientos/por-ente">Por ente</a></li>
+                  <li><a className="dropdown-item" href="/cumplimientos/por-clasificacion">Por clasificación de entes</a></li>
+                  <li><a className="dropdown-item" href="/comparativa">Comparativa</a></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
       <div className="container py-5">
       <div style={{ width: '100%', marginTop: 0, marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 12, padding: '8px', background: '#f8f9fa', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
@@ -592,182 +705,6 @@ export default function Comparativa() {
                   </div>
                 )}
               </div>
-
-              {/* Chart area for left selected */}
-              {selectedLeft && (
-                <div className="card" style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: 'none', padding: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <h4 style={{ fontWeight: 600, color: '#440D1E', marginBottom: 0 }}>Gráfico de cumplimientos</h4>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        className="btn btn-sm"
-                        onClick={handleExportPDFLeft}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 53, 69, 0.2)'; }}
-                        style={{
-                          background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 6,
-                          padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
-                          fontWeight: 600,
-                          fontSize: windowWidth < 426 ? 11 : 13,
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: windowWidth < 424 ? 3 : 6
-                        }}
-                      >
-                        {windowWidth < 426 ? null : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                          </svg>
-                        )}
-                        {windowWidth < 426 ? 'PDF' : 'Exportar PDF'}
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        onClick={handleExportExcelLeft}
-                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(20, 83, 45, 0.2)'; }}
-                        style={{
-                          background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 6,
-                          padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
-                          fontWeight: 600,
-                          fontSize: windowWidth < 426 ? 11 : 13,
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 2px 4px rgba(20, 83, 45, 0.2)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: windowWidth < 426 ? 3 : 6
-                        }}
-                      >
-                        {windowWidth < 424 ? null : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                          </svg>
-                        )}
-                        {windowWidth < 426 ? 'Excel' : 'Exportar Excel'}
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <label style={{ fontWeight: 600, color: '#495057', fontSize: 14, marginBottom: 0 }}>Selecciona años:</label>
-                    {(Array.from(new Set((selectedLeft.compliances||[]).map(c=>c.year))).sort((a,b)=>b-a)).map(y => (
-                      <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: selectedYearsLeft.includes(y) ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0', color: selectedYearsLeft.includes(y) ? '#fff' : '#495057', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' }}>
-                        <input type="checkbox" checked={selectedYearsLeft.includes(y)} onChange={() => toggleYearLeft(y)} style={{ cursor: 'pointer' }} />
-                        <span>{y}</span>
-                      </label>
-                    ))}
-                  </div>
-
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16, padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
-                  {(selectedYearsLeft || []).map(y => {
-                    const ic = computeICForEnteYear(selectedLeft, y);
-                    return <div key={y} style={{ background: '#fff', padding: '8px 12px', borderRadius: 6, fontWeight: 700, color: '#440D1E', fontSize: 13, border: '1px solid #e9ecef' }}>IC {y}: <span style={{ color: '#681b32' }}>{ic !== null ? `${ic}%` : '-'}</span></div>
-                  })}
-                </div>
-
-                <div style={{ width: '100%', height: 320, background: '#fff', border: '1px solid #e9ecef', borderRadius: 12, marginTop: 16 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    {(() => {
-                      const yearsAvailable = Array.from(new Set((selectedLeft.compliances||[]).map(c=>c.year))).sort();
-                      const yearsToRender = (selectedYearsLeft && selectedYearsLeft.length) ? selectedYearsLeft.slice().sort() : yearsAvailable;
-                      const enteForChart = { ...selectedLeft, __yearsToUse: yearsToRender };
-                      const data = buildBarDataForEnte(enteForChart);
-                      return (
-                        <BarChart
-                          data={data}
-                          margin={{ top: 10, right: 30, left: -30, bottom: 40 }}
-                          barCategoryGap="20%"
-                          barGap={1}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" tick={<CustomXAxisTick />}>
-                            <Label content={<CustomYearsLabel selectedYears={yearsToRender} />} position="bottom" />
-                          </XAxis>
-                          <YAxis
-                            domain={[0, 2]}
-                            allowDecimals={false}
-                            axisLine={false}
-                            tick={false}
-                          />
-                          <Tooltip content={<CustomBarTooltip />} />
-                          {yearsToRender.map(y => (
-                            <React.Fragment key={y}>
-                              <Bar
-                                dataKey={`${y}_no`}
-                                stackId={String(y)}
-                                fill="#dc3545"
-                                stroke="#991b1b"
-                                strokeWidth={1.8}
-                                fillOpacity={0.98}
-                                radius={[6, 6, 0, 0]}
-                              />
-                              <Bar
-                                dataKey={`${y}_parcial`}
-                                stackId={String(y)}
-                                fill="#ffc107"
-                                stroke="#B59B05"
-                                strokeWidth={1.8}
-                                fillOpacity={0.98}
-                                radius={[6, 6, 0, 0]}
-                              />
-                              <Bar
-                                dataKey={`${y}_cumplio`}
-                                stackId={String(y)}
-                                fill="#28a745"
-                                stroke="#277A3A"
-                                strokeWidth={1.8}
-                                fillOpacity={0.98}
-                                radius={[6, 6, 0, 0]}
-                              />
-                            </React.Fragment>
-                          ))}
-                        </BarChart>
-                      );
-                    })()}
-                  </ResponsiveContainer>
-                </div>
-
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 16, padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
-                  {(() => {
-                    const pct = computePercentagesForEnte(selectedLeft, selectedYearsLeft);
-                    return (
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ width: 14, height: 14, background: '#28a745', borderRadius: 4 }} />
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 2 }}>Cumplió</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#28a745' }}>{pct.cumplio}%</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ width: 14, height: 14, background: '#ffc107', borderRadius: 4 }} />
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 2 }}>Parcial</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#ffc107' }}>{pct.parcial}%</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ width: 14, height: 14, background: '#dc3545', borderRadius: 4 }} />
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 2 }}>No cumplió</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#dc3545' }}>{pct.no}%</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
             </div>
           </div>
 
@@ -813,184 +750,238 @@ export default function Comparativa() {
               )}
             </div>
             </div>
+        </div>
 
-            {/* Chart area for right selected */}
-            {selectedRight && (
+          {/* Comparison Chart - Only when both entes selected */}
+          {selectedLeft && selectedRight && (
+            <div style={{ width: '100%', marginTop: 24 }}>
               <div className="card" style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: 'none', padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h4 style={{ fontWeight: 600, color: '#440D1E', marginBottom: 0 }}>Gráfico de cumplimientos</h4>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      className="btn btn-sm"
-                      onClick={handleExportPDFRight}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 53, 69, 0.2)'; }}
-                      style={{
-                        background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
-                        fontWeight: 600,
-                        fontSize: windowWidth < 426 ? 11 : 13,
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: windowWidth < 426 ? 3 : 6
-                      }}
-                    >
-                      {windowWidth < 426 ? null : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                        </svg>
-                      )}
-                      {windowWidth < 426 ? 'PDF' : 'Exportar PDF'}
-                    </button>
-                    <button
-                      className="btn btn-sm"
-                      onClick={handleExportExcelRight}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(20, 83, 45, 0.2)'; }}
-                      style={{
-                        background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: windowWidth < 426 ? '6px 10px' : '8px 14px',
-                        fontWeight: 600,
-                        fontSize: windowWidth < 426 ? 11 : 13,
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 2px 4px rgba(20, 83, 45, 0.2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: windowWidth < 426 ? 3 : 6
-                      }}
-                    >
-                      {windowWidth < 426 ? null : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                        </svg>
-                      )}
-                      {windowWidth < 426 ? 'Excel' : 'Exportar Excel'}
-                    </button>
-                  </div>
-                </div>
+                <h4 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#440D1E' }}>Comparación: {selectedLeft.title} [Ente 1] | {selectedRight.title} [Ente 2]</h4>
 
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-                  <label style={{ fontWeight: 600, color: '#495057', fontSize: 14, marginBottom: 0 }}>Selecciona años:</label>
-                  {(Array.from(new Set((selectedRight.compliances||[]).map(c=>c.year))).sort((a,b)=>b-a)).map(y => (
-                    <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: selectedYearsRight.includes(y) ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0', color: selectedYearsRight.includes(y) ? '#fff' : '#495057', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' }}>
-                      <input type="checkbox" checked={selectedYearsRight.includes(y)} onChange={() => toggleYearRight(y)} style={{ cursor: 'pointer' }} />
+                  {Array.from(new Set([
+                    ...(selectedLeft.compliances||[]).map(c=>c.year),
+                    ...(selectedRight.compliances||[]).map(c=>c.year)
+                  ])).sort((a,b)=>b-a).map(y => (
+                    <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: selectedYearsLeft[0] === y ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0', color: selectedYearsLeft[0] === y ? '#fff' : '#495057', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' }}>
+                      <input type="radio" name="comparison_year" checked={selectedYearsLeft[0] === y} onChange={() => { setSelectedYearsLeft([y]); }} style={{ cursor: 'pointer' }} />
                       <span>{y}</span>
                     </label>
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
-                  {(selectedYearsRight || []).map(y => {
-                    const ic = computeICForEnteYear(selectedRight, y);
-                    return <div key={y} style={{ background: '#fff', padding: '8px 12px', borderRadius: 6, fontWeight: 700, color: '#440D1E', fontSize: 13, border: '1px solid #e9ecef' }}>IC {y}: <span style={{ color: '#681b32' }}>{ic !== null ? `${ic}%` : '-'}</span></div>
-                  })}
-                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                const years = selectedYearsLeft.join('-');
+                const enteIds = `${selectedLeft.id}-${selectedRight.id}`;
+                window.location.href = `/ExportPDFEnteCom?years=${years}&enteIds=${enteIds}`;
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 53, 69, 0.2)'; }}
+              style={{
+                background: 'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 14px',
+                fontWeight: 600,
+                fontSize: 13,
+                transition: 'all 0.3s ease',
+                boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+              </svg>
+              Exportar PDF
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                const years = selectedYearsLeft.join('-');
+                const enteIds = `${selectedLeft.id}-${selectedRight.id}`;
+                window.location.href = `/ExportExcelEnteCom?years=${years}&enteIds=${enteIds}`;
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(20, 83, 45, 0.2)'; }}
+              style={{
+                background: 'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '8px 14px',
+                fontWeight: 600,
+                fontSize: 13,
+                transition: 'all 0.3s ease',
+                boxShadow: '0 2px 4px rgba(20, 83, 45, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+              </svg>
+              Exportar Excel
+            </button>
+          </div>
 
-                <div style={{ width: '100%', height: 320, background: '#fff', border: '1px solid #e9ecef', borderRadius: 12, marginTop: 16 }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                {selectedYearsLeft.length > 0 && (
+                  <div style={{ width: '100%', marginTop: 16 }}>
+                    <div style={{ width: '100%', height: 320, background: '#fff', border: '1px solid #e9ecef', borderRadius: 12, marginBottom: 12 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        {(() => {
+                          // Build data for left and right entes using the buildBarDataForEnte logic
+                          // but with years from selectedYearsLeft
+                          const buildDataForComparison = (ente, yearsToUse) => {
+                            if (!ente) return [];
+                            const yearsArr = Array.isArray(yearsToUse) && yearsToUse.length
+                              ? yearsToUse.slice().sort((a,b)=>a-b)
+                              : Array.from(new Set((ente.compliances || []).map(c => c.year))).sort((a, b) => a - b);
+                            const monthsOrder = months.filter(m=>m!=='Todos');
+                            return monthsOrder.map(m=>{
+                              const row = { month: m.slice(0,3).toLowerCase() };
+                              yearsArr.forEach(y=>{
+                                const comps = (ente.compliances||[]).filter(c=>c.year===y && c.month===m);
+                                const counts = { cumplio:0, parcial:0, no:0 };
+                                comps.forEach(c=>{
+                                  const s=(c.status||'').toString().toLowerCase();
+                                  if (s==='cumplio') counts.cumplio++;
+                                  else if (s==='parcial' || s==='partial') counts.parcial++;
+                                  else counts.no++;
+                                });
+                                row[`${y}_cumplio`] = counts.cumplio ? 1.5 : 0;
+                                row[`${y}_parcial`] = counts.parcial ? 0.9 : 0;
+                                row[`${y}_no`] = counts.no ? 0.5 : 0;
+                              });
+                              return row;
+                            });
+                          };
+
+                          const leftData = buildDataForComparison(selectedLeft, selectedYearsLeft);
+                          const rightData = buildDataForComparison(selectedRight, selectedYearsLeft);
+
+                          // Merge both datasets by month, prefixing left_ and right_
+                          const mergedData = leftData.map((leftRow, idx) => {
+                            const rightRow = rightData[idx] || {};
+                            const merged = { month: leftRow.month };
+
+                            // Copy left ente data with left_ prefix
+                            Object.keys(leftRow).forEach(key => {
+                              if (key !== 'month') {
+                                merged[`left_${key}`] = leftRow[key];
+                              }
+                            });
+
+                            // Copy right ente data with right_ prefix
+                            Object.keys(rightRow).forEach(key => {
+                              if (key !== 'month') {
+                                merged[`right_${key}`] = rightRow[key];
+                              }
+                            });
+
+                            return merged;
+                          });
+
+                          // Generate Bar components for each year dynamically
+                          const yearsArr = Array.isArray(selectedYearsLeft) && selectedYearsLeft.length
+                            ? selectedYearsLeft.slice().sort((a,b)=>a-b)
+                            : [];
+
+                          return (
+                            <BarChart data={mergedData} margin={{ top: 10, right: 30, left: -30, bottom: 40 }} barCategoryGap="20%" barGap={1}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="month" tick={<CustomXAxisTick />} />
+                              <YAxis domain={[0, 2]} allowDecimals={false} axisLine={false} tick={false} />
+                              <Tooltip content={<CustomBarTooltip />} />
+                              {/* Left ente bars (one set per year) */}
+                              {yearsArr.map(y => (
+                                <Bar key={`left_${y}_cumplio`} dataKey={`left_${y}_cumplio`} stackId="left" fill="#28a745" stroke="#277A3A" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                              ))}
+                              {yearsArr.map(y => (
+                                <Bar key={`left_${y}_parcial`} dataKey={`left_${y}_parcial`} stackId="left" fill="#ffc107" stroke="#B59B05" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                              ))}
+                              {yearsArr.map(y => (
+                                <Bar key={`left_${y}_no`} dataKey={`left_${y}_no`} stackId="left" fill="#dc3545" stroke="#991b1b" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                              ))}
+                              {/* Right ente bars with reduced opacity (one set per year) */}
+                              {yearsArr.map(y => (
+                                <Bar key={`right_${y}_cumplio`} dataKey={`right_${y}_cumplio`} stackId="right" fill="#28a745" stroke="#277A3A" strokeWidth={1.8} fillOpacity={/*0.6*/0.98} radius={[6, 6, 0, 0]} />
+                              ))}
+                              {yearsArr.map(y => (
+                                <Bar key={`right_${y}_parcial`} dataKey={`right_${y}_parcial`} stackId="right" fill="#ffc107" stroke="#B59B05" strokeWidth={1.8} fillOpacity={/*0.6*/0.98} radius={[6, 6, 0, 0]} />
+                              ))}
+                              {yearsArr.map(y => (
+                                <Bar key={`right_${y}_no`} dataKey={`right_${y}_no`} stackId="right" fill="#dc3545" stroke="#991b1b" strokeWidth={1.8} fillOpacity={/*0.6*/0.98} radius={[6, 6, 0, 0]} />
+                              ))}
+                            </BarChart>
+                          );
+                        })()}
+                      </ResponsiveContainer>
+                    </div>
+                    <div style={{ textAlign: 'center', fontWeight: 600, color: '#495057', fontSize: 14, marginBottom: 16 }}>
+                      Ente 1 | Ente 2
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', marginTop: 16, padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                  <div>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#440D1E', marginBottom: 8 }}>Ente 1</h5>
                     {(() => {
-                      const yearsAvailable = Array.from(new Set((selectedRight.compliances||[]).map(c=>c.year))).sort();
-                      const yearsToRender = (selectedYearsRight && selectedYearsRight.length) ? selectedYearsRight.slice().sort() : yearsAvailable;
-                      const enteForChart = { ...selectedRight, __yearsToUse: yearsToRender };
-                      const data = buildBarDataForEnte(enteForChart);
+                      const pct = computePercentagesForEnte(selectedLeft, selectedYearsLeft);
                       return (
-                        <BarChart
-                          data={data}
-                          margin={{ top: 10, right: 30, left: -30, bottom: 40 }}
-                          barCategoryGap="20%"
-                          barGap={1}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" tick={<CustomXAxisTick />}>
-                            <Label content={<CustomYearsLabel selectedYears={yearsToRender} />} position="bottom" />
-                          </XAxis>
-                          <YAxis
-                            domain={[0, 2]}
-                            allowDecimals={false}
-                            axisLine={false}
-                            tick={false}
-                          />
-                          <Tooltip content={<CustomBarTooltip />} />
-                          {yearsToRender.map(y => (
-                            <React.Fragment key={y}>
-                              <Bar
-                                dataKey={`${y}_no`}
-                                stackId={String(y)}
-                                fill="#dc3545"
-                                stroke="#991b1b"
-                                strokeWidth={1.8}
-                                fillOpacity={0.98}
-                                radius={[6, 6, 0, 0]}
-                              />
-                              <Bar
-                                dataKey={`${y}_parcial`}
-                                stackId={String(y)}
-                                fill="#ffc107"
-                                stroke="#B59B05"
-                                strokeWidth={1.8}
-                                fillOpacity={0.98}
-                                radius={[6, 6, 0, 0]}
-                              />
-                              <Bar
-                                dataKey={`${y}_cumplio`}
-                                stackId={String(y)}
-                                fill="#28a745"
-                                stroke="#277A3A"
-                                strokeWidth={1.8}
-                                fillOpacity={0.98}
-                                radius={[6, 6, 0, 0]}
-                              />
-                            </React.Fragment>
-                          ))}
-                        </BarChart>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, background: '#28a745', borderRadius: 4 }} />
+                            <div><div style={{ fontSize: 11, color: '#6c757d' }}>Cumplió</div><div style={{ fontSize: 14, fontWeight: 700, color: '#28a745' }}>{pct.cumplio}%</div></div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, background: '#ffc107', borderRadius: 4 }} />
+                            <div><div style={{ fontSize: 11, color: '#6c757d' }}>Parcial</div><div style={{ fontSize: 14, fontWeight: 700, color: '#ffc107' }}>{pct.parcial}%</div></div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, background: '#dc3545', borderRadius: 4 }} />
+                            <div><div style={{ fontSize: 11, color: '#6c757d' }}>No cumplió</div><div style={{ fontSize: 14, fontWeight: 700, color: '#dc3545' }}>{pct.no}%</div></div>
+                          </div>
+                        </div>
                       );
                     })()}
-                  </ResponsiveContainer>
-                </div>
+                  </div>
 
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 16, padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
-                  {(() => {
-                    const pct = computePercentagesForEnte(selectedRight, selectedYearsRight);
-                    return (
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ width: 14, height: 14, background: '#28a745', borderRadius: 4 }} />
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 2 }}>Cumplió</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#28a745' }}>{pct.cumplio}%</div>
+                  <div>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#440D1E', marginBottom: 8 }}>Ente 2</h5>
+                    {(() => {
+                      const pct = computePercentagesForEnte(selectedRight, selectedYearsLeft);
+                      return (
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, background: '#28a745', borderRadius: 4 }} />
+                            <div><div style={{ fontSize: 11, color: '#6c757d' }}>Cumplió</div><div style={{ fontSize: 14, fontWeight: 700, color: '#28a745' }}>{pct.cumplio}%</div></div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, background: '#ffc107', borderRadius: 4 }} />
+                            <div><div style={{ fontSize: 11, color: '#6c757d' }}>Parcial</div><div style={{ fontSize: 14, fontWeight: 700, color: '#ffc107' }}>{pct.parcial}%</div></div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, background: '#dc3545', borderRadius: 4 }} />
+                            <div><div style={{ fontSize: 11, color: '#6c757d' }}>No cumplió</div><div style={{ fontSize: 14, fontWeight: 700, color: '#dc3545' }}>{pct.no}%</div></div>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ width: 14, height: 14, background: '#ffc107', borderRadius: 4 }} />
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 2 }}>Parcial</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#ffc107' }}>{pct.parcial}%</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <div style={{ width: 14, height: 14, background: '#dc3545', borderRadius: 4 }} />
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6c757d', marginBottom: 2 }}>No cumplió</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#dc3545' }}>{pct.no}%</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1014,7 +1005,7 @@ export default function Comparativa() {
             <div className="col-lg-9">
               <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: 14, marginBottom: 8 }}>Años (máximo 3):</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {years.map((y) => (
+                {allYears.map((y) => (
                   <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: selectedYearsForMonthChart.includes(y) ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0', color: selectedYearsForMonthChart.includes(y) ? '#fff' : '#495057', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' }}>
                     <input type="checkbox" checked={selectedYearsForMonthChart.includes(y)} onChange={() => toggleYearForMonthChart(y)} style={{ cursor: 'pointer' }} />
                     <span>{y}</span>
@@ -1192,9 +1183,45 @@ export default function Comparativa() {
                               <Cell key={`cell-${idx}`} fill={entry.color} />
                             ))}
                           </Pie>
-                          <Tooltip content={<CustomDonutTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                         </PieChart>
                       </ResponsiveContainer>
+                    </div>
+                    <div style={{ marginTop: 12, padding: '8px', background: '#f0f0f0', borderRadius: 8 }}>
+                      <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid #ddd' }}>
+                            <th style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 600, color: '#000' }}>Año</th>
+                            <th style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 600 }}>
+                              <div style={{ width: 8, height: 8, background: '#28a745', borderRadius: '50%', margin: '0 auto' }} />
+                            </th>
+                            <th style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 600 }}>
+                              <div style={{ width: 8, height: 8, background: '#ffc107', borderRadius: '50%', margin: '0 auto' }} />
+                            </th>
+                            <th style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 600 }}>
+                              <div style={{ width: 8, height: 8, background: '#dc3545', borderRadius: '50%', margin: '0 auto' }} />
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedYearsForMonthChart && selectedYearsForMonthChart.length > 0 ? (() => {
+                            return selectedYearsForMonthChart.slice().sort().map(y => {
+                              const stat = yearStats[y] || { cumplio: 0, parcial: 0, no: 0 };
+                              const total = stat.cumplio + stat.parcial + stat.no;
+                              const cumplioPerc = total > 0 ? Math.round((stat.cumplio / total) * 100) : 0;
+                              const parcialPerc = total > 0 ? Math.round((stat.parcial / total) * 100) : 0;
+                              const noPerc = total > 0 ? Math.round((stat.no / total) * 100) : 0;
+                              return (
+                                <tr key={y} style={{ borderBottom: '1px solid #e9ecef' }}>
+                                  <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 600, color: '#000' }}>{y}</td>
+                                  <td style={{ padding: '6px 4px', textAlign: 'center', color: '#000', fontWeight: 500 }}>{cumplioPerc}% ({stat.cumplio}/{total})</td>
+                                  <td style={{ padding: '6px 4px', textAlign: 'center', color: '#000', fontWeight: 500 }}>{parcialPerc}% ({stat.parcial}/{total})</td>
+                                  <td style={{ padding: '6px 4px', textAlign: 'center', color: '#000', fontWeight: 500 }}>{noPerc}% ({stat.no}/{total})</td>
+                                </tr>
+                              );
+                            });
+                          })() : null}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 );
@@ -1235,6 +1262,13 @@ export default function Comparativa() {
         </div>
       )}
       </div>
+      {/* Footer */}
+      <footer className="bg-dark text-white text-center py-3">
+        <small>
+          © {new Date().getFullYear()} Auditoría Superior del Estado - Baja California Sur
+        </small>
+      </footer>
     </div>
   );
 }
+

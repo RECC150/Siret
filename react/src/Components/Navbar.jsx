@@ -15,7 +15,7 @@ export default function Navbar() {
     const menuRef = React.useRef();
 
     // No mostrar navbar en login
-    if (location.pathname === '/login') {
+    if (location.pathname.startsWith('/login/b4e1c9f0a3d7e6b2c5a8f1d3e7b9c2a4')) {
         return null;
     }
 
@@ -65,9 +65,9 @@ export default function Navbar() {
             localStorage.removeItem("permisos");
             toast.success("Sesión cerrada");
             setLoading(false);
-            navigate("/login", { replace: true });
+            navigate("/login/b4e1c9f0a3d7e6b2c5a8f1d3e7b9c2a4", { replace: true });
             // Fallback duro por si el router no navega
-            setTimeout(() => { try { window.location.assign('/login'); } catch (_) {} }, 150);
+            setTimeout(() => { try { window.location.assign('/login/b4e1c9f0a3d7e6b2c5a8f1d3e7b9c2a4'); } catch (_) {} }, 150);
         }
     };
 

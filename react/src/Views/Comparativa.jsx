@@ -19,7 +19,6 @@ export default function Comparativa() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [viewMode, setViewMode] = useState('por-ente'); // 'por-ente' | 'por-mes-anio'
 
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036, 2037];
   const months = [
     'Todos', 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
   ];
@@ -27,6 +26,16 @@ export default function Comparativa() {
   const containerRef = React.useRef(null);
 
   const [entesList, setEntesList] = useState([]);
+  // Años disponibles dinámicos desde la base de datos (entes/compliances)
+  const allYears = useMemo(() => {
+    const s = new Set();
+    (entesList || []).forEach(e => {
+      (e.compliances || []).forEach(c => {
+        if (c.year) s.add(Number(c.year));
+      });
+    });
+    return Array.from(s).sort((a,b)=>a-b);
+  }, [entesList]);
   const [leftFilterName, setLeftFilterName] = useLocalStorage('comparativa_leftFilterName', '');
   const [leftFilterClass, setLeftFilterClass] = useLocalStorage('comparativa_leftFilterClass', '');
   const [rightFilterName, setRightFilterName] = useLocalStorage('comparativa_rightFilterName', '');
@@ -38,7 +47,18 @@ export default function Comparativa() {
   const [chartYearRight, setChartYearRight] = useState('Todos');
   const [selectedMonthForChart, setSelectedMonthForChart] = useLocalStorage('comparativa_monthForChart', 'Todos');
   // default to the most recent up to 3 years
-  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useLocalStorage('comparativa_yearsForMonthChart', years.slice(-3));
+  const [selectedYearsForMonthChart, setSelectedYearsForMonthChart] = useLocalStorage('comparativa_yearsForMonthChart', []);
+
+  // Inicializa selección por defecto a los últimos 3 años disponibles cuando cargan los datos
+  useEffect(() => {
+    if (!allYears || allYears.length === 0) return;
+    setSelectedYearsForMonthChart(prev => {
+      // Si no hay selección previa o contiene años que ya no existen, reestablecer
+      const validPrev = (prev || []).filter(y => allYears.includes(y));
+      if (validPrev.length > 0) return validPrev;
+      return allYears.slice(-3);
+    });
+  }, [allYears]);
   // For per-ente comparisons: selected years per side (max 3, min 1)
   const [selectedYearsLeft, setSelectedYearsLeft] = useLocalStorage('comparativa_yearsLeft', []);
   const [selectedYearsRight, setSelectedYearsRight] = useLocalStorage('comparativa_yearsRight', []);
@@ -990,7 +1010,7 @@ export default function Comparativa() {
             <div className="col-lg-9">
               <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: 14, marginBottom: 8 }}>Años (máximo 3):</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {years.map((y) => (
+                {allYears.map((y) => (
                   <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: selectedYearsForMonthChart.includes(y) ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0', color: selectedYearsForMonthChart.includes(y) ? '#fff' : '#495057', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' }}>
                     <input type="checkbox" checked={selectedYearsForMonthChart.includes(y)} onChange={() => toggleYearForMonthChart(y)} style={{ cursor: 'pointer' }} />
                     <span>{y}</span>
@@ -1247,6 +1267,12 @@ export default function Comparativa() {
         </div>
       )}
       </div>
+      {/* Footer */}
+      <footer className="bg-dark text-white text-center py-3">
+        <small>
+          © {new Date().getFullYear()} Auditoría Superior del Estado - Baja California Sur
+        </small>
+      </footer>
     </div>
   );
 }

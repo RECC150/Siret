@@ -34,6 +34,13 @@ export default function Login() {
     const password = passwordRef.current?.value.trim() || "";
 
     if (!name || !password) {
+      if (!name && !password) {
+        toast.error("Por favor, ingresa tu usuario y contraseña");
+      } else if (!name) {
+        toast.error("Por favor, ingresa tu nombre de usuario");
+      } else {
+        toast.error("Por favor, ingresa tu contraseña");
+      }
       setErrors({
         name: !name ? "El nombre de usuario es requerido" : null,
         password: !password ? "La contraseña es requerida" : null,
@@ -68,15 +75,30 @@ export default function Login() {
       const response = err?.response;
       if (response?.status === 422) {
         // Validación / credenciales
-        toast.error("Credenciales incorrectas. Verifica usuario y contraseña");
-        // Si tu backend envía errores específicos:
         if (response.data?.errors) {
-          setErrors(Object.fromEntries(
+          // Errores específicos del backend
+          const backendErrors = Object.fromEntries(
             Object.entries(response.data.errors).map(([k, v]) => [k, v?.[0] ?? v])
-          ));
+          );
+          setErrors(backendErrors);
+
+          // Mostrar toast con el primer error específico
+          const firstError = Object.values(backendErrors)[0];
+          toast.error(firstError || "Credenciales incorrectas. Verifica usuario y contraseña");
+        } else {
+          // Error genérico: marcar ambos campos
+          toast.error("Credenciales incorrectas. Verifica usuario y contraseña");
+          setErrors({
+            name: "Usuario o contraseña incorrectos",
+            password: "Usuario o contraseña incorrectos"
+          });
         }
       } else if (response?.status === 401) {
         toast.error("No autorizado. Credenciales inválidas");
+        setErrors({
+          name: "Credenciales inválidas",
+          password: "Credenciales inválidas"
+        });
       } else {
         toast.error("Error al iniciar sesión. Comprueba la conexión");
       }
@@ -130,19 +152,47 @@ export default function Login() {
                   onChange={() => setErrors({ ...errors, name: null })}
                   className={`w-full form-control-login ${errors.name ? "border-red-500" : ""}`}
                 />
-                {errors.name && <p className="text-red-600 text-sm mt-2">{errors.name}</p>}
+                {errors.name && (
+                  <div style={{
+                    backgroundColor: '#fee2e2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    marginTop: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span style={{ fontSize: '18px', color: '#dc2626' }}>⚠️</span>
+                    <p style={{ margin: 0, color: '#991b1b', fontSize: '14px', fontWeight: 500 }}>{errors.name}</p>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
                 <input
                   ref={passwordRef}
-                  type="password"
+                  type="password" pattern=".{6,}"
                   placeholder="Contraseña"
                   onChange={() => setErrors({ ...errors, password: null })}
                   className={`w-full form-control-login ${errors.password ? "border-red-500" : ""}`}
                 />
-                {errors.password && <p className="text-red-600 text-sm mt-2">{errors.password}</p>}
+                {errors.password && (
+                  <div style={{
+                    backgroundColor: '#fee2e2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    marginTop: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span style={{ fontSize: '18px', color: '#dc2626' }}>⚠️</span>
+                    <p style={{ margin: 0, color: '#991b1b', fontSize: '14px', fontWeight: 500 }}>{errors.password}</p>
+                  </div>
+                )}
               </div>
 
               <button
@@ -196,7 +246,7 @@ export default function Login() {
 
             <div className="mt-4 text-sm text-gray-700" style={{ lineHeight: 1.5 }}>
               <p>Si no recuerdas tu nombre de usuario o contraseña, contacta al administrador del sistema.</p>
-              <p className="text-xs text-gray-500">Si el problema persiste, envía un correo a soporte@tudominio.mx</p>
+              <p className="text-xs text-gray-500">Si el problema persiste, envía un correo a superrecc@gmail.com</p>
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>

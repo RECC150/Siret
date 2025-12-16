@@ -8,7 +8,7 @@ export default function GuestLayout(){
     const location = useLocation();
 
     if (token) {
-        return <Navigate to="/siret" />;
+        return <Navigate to="/Siret" />;
     }
 
     return (

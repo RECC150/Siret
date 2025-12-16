@@ -1750,6 +1750,12 @@ export default function SiretExportacion(){
         </div>
       )}
       </div>
+      {/* Footer */}
+      <footer className="bg-dark text-white text-center py-3">
+        <small>
+          © {new Date().getFullYear()} Auditoría Superior del Estado - Baja California Sur
+        </small>
+      </footer>
     </div>
   );
 }

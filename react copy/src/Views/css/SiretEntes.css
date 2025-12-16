@@ -1,0 +1,458 @@
+/* SiretEntes Responsive Styles */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.modal-backdrop {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-backdrop.closing {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+
+.modal-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content.closing {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+.form-select {
+  border: 1px solid #ddd !important;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: clamp(10px, 2vw, 12px) clamp(10px, 2vw, 14px);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.form-select:focus {
+  border-color: #85435e !important;
+  box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+  background-color: #fff0f5 !important;
+  color: #333 !important;
+}
+
+.form-select:hover {
+  border-color: #85435e !important;
+}
+
+.form-control {
+  border: 1px solid #ddd !important;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  padding: clamp(10px, 2vw, 12px) clamp(10px, 2vw, 14px);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.form-control:focus {
+  border-color: #85435e !important;
+  box-shadow: 0 0 5px rgba(194, 24, 91, 0.5) !important;
+  background-color: #fff0f5 !important;
+  color: #333 !important;
+}
+
+.form-control:hover {
+  border-color: #85435e !important;
+}
+
+/* Responsive header */
+.siret-header {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: clamp(1.5rem, 4vw, 2rem) clamp(1rem, 3vw, 2rem);
+}
+
+.siret-header h1 {
+  margin: 0;
+  margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  color: #fff;
+}
+
+.siret-header p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  color: #fff;
+}
+
+/* Responsive table */
+.siret-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.siret-table {
+  min-width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.siret-table thead tr {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  color: #fff;
+}
+
+.siret-table th {
+  border-bottom: none;
+  padding: clamp(12px, 2vw, 16px);
+  font-weight: 600;
+  text-align: left;
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+}
+
+.siret-table td {
+  border-bottom: 1px solid #e9ecef;
+  padding: clamp(12px, 2vw, 16px);
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+}
+
+.siret-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.siret-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+/* Responsive modal */
+.siret-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: clamp(0.5rem, 2vw, 1rem);
+}
+
+.siret-modal-content {
+  width: 95%;
+  max-width: clamp(300px, 85vw, 1100px);
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.siret-modal-header {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  color: #fff;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  flex-shrink: 0;
+  border-bottom: none;
+}
+
+.siret-modal-header h4 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+.siret-modal-body {
+  padding: clamp(1.5rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (min-width: 768px) {
+  .siret-modal-body {
+    flex-direction: row;
+    gap: clamp(1.5rem, 4vw, 2rem);
+  }
+}
+
+.siret-modal-body-image {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: clamp(150px, 50vw, 200px);
+}
+
+@media (min-width: 768px) {
+  .siret-modal-body-image {
+    width: clamp(180px, 30vw, 400px);
+    height: clamp(220px, 40vw, 260px);
+  }
+}
+
+.siret-modal-body-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  min-width: 0;
+}
+
+.siret-modal-footer {
+  border-top: 1px solid #e9ecef;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  gap: clamp(0.5rem, 1vw, 1rem);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.siret-btn {
+  padding: clamp(8px, 1vw, 10px) clamp(16px, 2vw, 28px);
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+  border-radius: 6px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.siret-btn-primary {
+  background: linear-gradient(135deg, #681b32 0%, #200b07 100%);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(104, 27, 50, 0.3);
+}
+
+.siret-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(104, 27, 50, 0.4);
+}
+
+.siret-btn-secondary {
+  background: #fff;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.siret-btn-secondary:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.siret-btn-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(220, 53, 69, 0.3);
+}
+
+.siret-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(220, 53, 69, 0.4);
+}
+
+/* Filters section responsive */
+.siret-filters {
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.siret-filters-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+@media (min-width: 768px) {
+  .siret-filters-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .siret-filters-row {
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1rem, 2vw, 1.5rem);
+  }
+}
+
+.siret-filters-label {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: clamp(0.5rem, 1vw, 0.75rem);
+  display: block;
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+}
+
+/* Actions section */
+.siret-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  flex-wrap: wrap;
+  gap: clamp(0.75rem, 2vw, 1rem);
+}
+
+@media (max-width: 480px) {
+  .siret-actions {
+    flex-direction: column;
+  }
+
+  .siret-actions button {
+    width: 100%;
+  }
+}
+
+/* Responsivamente adaptar tabla para móvil */
+@media (max-width: 768px) {
+  .siret-table th:nth-child(3) {
+    text-align: center;
+  }
+
+  .siret-table-actions {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+  }
+
+  .siret-table-actions button {
+    width: 100%;
+    padding: clamp(8px, 1vw, 10px) clamp(12px, 2vw, 16px) !important;
+    font-size: clamp(0.75rem, 1.5vw, 0.9rem) !important;
+  }
+
+  .siret-table img {
+    width: clamp(32px, 8vw, 48px) !important;
+    height: clamp(32px, 8vw, 48px) !important;
+  }
+}
+
+/* Delete modal */
+.siret-delete-modal {
+  width: clamp(280px, 90vw, 480px);
+}
+
+.siret-delete-modal .siret-modal-body {
+  flex-direction: column;
+  padding: clamp(1.5rem, 3vw, 2rem);
+}
+
+/* Image preview container */
+.siret-image-preview {
+  width: 100%;
+  aspect-ratio: 4/5;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #e9ecef;
+  background: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.siret-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Form field */
+.siret-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1vw, 0.75rem);
+}
+
+.siret-form-field label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.siret-form-field .form-control,
+.siret-form-field .form-select,
+.siret-form-field textarea {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: clamp(10px, 2vw, 12px) clamp(10px, 2vw, 14px);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  transition: all 0.3s ease;
+}
+
+.siret-form-field textarea {
+  min-height: clamp(120px, 20vh, 140px);
+  resize: vertical;
+}
+
+/* Responsive text */
+.siret-required {
+  color: #dc3545;
+}
+
+.siret-optional {
+  color: #6c757d;
+  font-size: clamp(0.75rem, 1.5vw, 0.85rem);
+  font-weight: 400;
+}
+
+/* Responsive icon */
+.siret-icon {
+  width: clamp(16px, 2vw, 24px);
+  height: clamp(16px, 2vw, 24px);
+  vertical-align: middle;
+}
+
+/* Loader */
+.siret-loader {
+  text-align: center;
+  padding: clamp(2rem, 4vw, 3rem);
+  color: #6c757d;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+}
+
+/* Empty state */
+.siret-empty-state {
+  text-align: center;
+  padding: clamp(2rem, 4vw, 3rem);
+  color: #6c757d;
+}
+
+.siret-empty-state svg {
+  width: clamp(36px, 8vw, 48px);
+  height: clamp(36px, 8vw, 48px);
+  margin-bottom: clamp(0.75rem, 2vw, 1rem);
+  opacity: 0.5;
+}
+
+.siret-empty-state p {
+  margin: 0;
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+}

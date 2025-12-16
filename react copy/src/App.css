@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "styles/responsive.css";
+@import "styles/views.css";
+@import "Components/Navbar.css";
+@import "Views/css/SiretEntes.css";
+@import "Views/css/SiretClasificaciones.css";
+@import "Views/css/Comparativa.css";
+@import "Views/css/CumplimientosExport.css";

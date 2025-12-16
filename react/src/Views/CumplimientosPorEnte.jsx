@@ -111,6 +111,13 @@ export default function CumplimientosMesAnio() {
   // Control de vista (mostrar solo lista / graficas / indicadores / todo)
   const [viewMode, setViewMode] = useLocalStorage('cumplimientos_mesAnio_viewMode', 'lista');
 
+  // Si viene con 'graficas' desde otra página, forzar 'lista' porque aquí no existe esa pestaña
+  useEffect(() => {
+    if (viewMode === 'graficas') {
+      setViewMode('lista');
+    }
+  }, [viewMode, setViewMode]);
+
 
   // Nuevo: estado para modal / mes seleccionado
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -836,9 +843,17 @@ useEffect(() => {
               Filtros de búsqueda
             </h6>
             <form className={`row g-3 ${styles.busqueda}`} onSubmit={(e)=>e.preventDefault()}>
-                        <div className="col-md-3">
-                          <label className="form-label">Buscar</label>
-                          <input className="form-control" placeholder="Buscar ente" value={enteQuery} onChange={e=>setEnteQuery(e.target.value)} />
+                        <div className="col-12 col-lg-10">
+                          <label className="form-label">Ente</label>
+                          <input
+                            className="form-control"
+                            list="entes-list"
+                            placeholder="Buscar ente"
+                            value={enteQuery}
+                            onChange={e=>setEnteQuery(e.target.value)}
+                            style={{ borderRadius: '8px', padding: '10px 14px', width: '100%' }}
+                          />
+                          <datalist id="entes-list">{(entesList||entesListFallback).map((e,i)=>(<option key={i} value={e.title} />))}</datalist>
                         </div>
                       </form>
           </div>
@@ -1240,11 +1255,19 @@ useEffect(() => {
         <div className="card mb-3" style={{ border: 'none', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <div className="card-body" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', flex: 1, minWidth: 300 }}>
                 <form className={`row g-3 ${styles.busqueda}`} onSubmit={(e)=>e.preventDefault()}>
-                        <div className="col-md-3">
-                          <label className="form-label">Buscar</label>
-                          <input className="form-control" placeholder="Buscar ente" value={enteQuery} onChange={e=>setEnteQuery(e.target.value)} />
+                        <div className="col-12 col-lg-9">
+                          <label className="form-label">Ente</label>
+                          <input
+                            className="form-control"
+                            list="entes-list"
+                            placeholder="Buscar ente"
+                            value={enteQuery}
+                            onChange={e=>setEnteQuery(e.target.value)}
+                            style={{ borderRadius: '8px', padding: '10px 14px', width: '180%' }}
+                          />
+                          <datalist id="entes-list">{(entesList||entesListFallback).map((e,i)=>(<option key={i} value={e.title} />))}</datalist>
                         </div>
                       </form>
               </div>
@@ -1418,6 +1441,12 @@ useEffect(() => {
 
       {/* ...existing rest of component (gráficas, modales) ... */}
       </div>
+      {/* Footer */}
+      <footer className="bg-dark text-white text-center py-3">
+        <small>
+          © {new Date().getFullYear()} Auditoría Superior del Estado - Baja California Sur
+        </small>
+      </footer>
     </div>
   );
 }

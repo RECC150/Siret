@@ -32,14 +32,41 @@ import ExportExcelEnte from "./Views/ExportExcelEnte";
 import ExportExcelCom from "./Views/ExportExcelCom";
 import ExportPDFEnteCom from "./Views/ExportPDFEnteCom";
 import ExportExcelEnteCom from "./Views/ExportExcelEnteCom";
+import SiretPDFEnteCom from "./Views/SiretExportPDFEnteCom";
+import SiretExcelEnteCom from "./Views/SiretExportExcelEnteCom";
 
 
 const router = createBrowserRouter([
+  // Rutas públicas primero: esto asegura que "/" cargue Inicio
+  {
+    path: "/",
+    element: <GuestLayout />,
+    children: [
+      { path: "", element: <Inicio /> },
+      { path: "/inicio", element: <Inicio /> },
+      { path: "/cumplimientos", element: <Cumplimientos /> },
+      { path: "/cumplimientos/mes-anio", element: <CumplimientosMesAnio /> },
+      { path: "/cumplimientos/por-ente", element: <CumplimientosPorEnte /> },
+      { path: "/cumplimientos/por-clasificacion", element: <CumplimientosPorClasificacion /> },
+      { path: "/comparativa", element: <Comparativa /> },
+      { path: "/login/b4e1c9f0a3d7e6b2c5a8f1d3e7b9c2a4", element: <Login /> },
+      { path: "/ExportPDF", element: <ExportPDF /> },
+      { path: "/ExportPDFMes", element: <ExportPDFMes /> },
+      { path: "/ExportPDFEnte", element: <ExportPDFEnte /> },
+      { path: "/ExportPDFCom", element: <ExportPDFCom /> },
+      { path: "/ExportExcel", element: <ExportExcel /> },
+      { path: "/ExportExcelMes", element: <ExportExcelMes /> },
+      { path: "/ExportExcelEnte", element: <ExportExcelEnte /> },
+      { path: "/ExportExcelCom", element: <ExportExcelCom /> },
+      { path: "/ExportPDFEnteCom", element: <ExportPDFEnteCom /> },
+      { path: "/ExportExcelEnteCom", element: <ExportExcelEnteCom /> }
+    ],
+  },
+  // Rutas protegidas después
   {
     path: "/",
     element: <DefaultLayout />,
     children: [
-
       { path: "/Siret", element: <Siret /> },
       { path: "/SiretEntes", element: <SiretEntes /> },
       { path: "/SiretClasificaciones", element: <SiretClasificaciones /> },
@@ -53,32 +80,9 @@ const router = createBrowserRouter([
       { path: "/SiretExportExcelEnte", element: <SiretExportExcelEnte /> },
       { path: "/SiretExportPDFCom", element: <SiretExportPDFCom /> },
       { path: "/SiretExportExcelCom", element: <SiretExportExcelCom /> },
-      { path: "/SiretComparativa", element: <SiretComparativa /> }
-    ],
-  },
-  {
-    path: "/",
-    element: <GuestLayout />,
-    children: [
-      { path: "", element: <Inicio /> },
-      { path: "/inicio", element: <Inicio /> },
-      { path: "/cumplimientos", element: <Cumplimientos /> },
-      { path: "/cumplimientos/mes-anio", element: <CumplimientosMesAnio /> },
-      { path: "/cumplimientos/por-ente", element: <CumplimientosPorEnte /> },
-      { path: "/cumplimientos/por-clasificacion", element: <CumplimientosPorClasificacion /> },
-      { path: "/comparativa", element: <Comparativa /> },
-      { path: "/login", element: <Login /> },
-      { path: "/ExportPDF", element: <ExportPDF /> },
-      { path: "/ExportPDFMes", element: <ExportPDFMes /> },
-      { path: "/ExportPDFEnte", element: <ExportPDFEnte /> },
-      { path: "/ExportPDFCom", element: <ExportPDFCom /> },
-      { path: "/ExportExcel", element: <ExportExcel /> },
-      { path: "/ExportExcelMes", element: <ExportExcelMes /> },
-      { path: "/ExportExcelEnte", element: <ExportExcelEnte /> },
-      { path: "/ExportExcelCom", element: <ExportExcelCom /> },
-      { path: "/ExportPDFEnteCom", element: <ExportPDFEnteCom /> },
-      { path: "/ExportExcelEnteCom", element: <ExportExcelEnteCom /> }
-
+      { path: "/SiretComparativa", element: <SiretComparativa /> },
+      { path: "/SiretExportPDFEnteCom", element: <SiretPDFEnteCom /> },
+      { path: "/SiretExportExcelEnteCom", element: <SiretExcelEnteCom /> }
     ],
   },
 ]);

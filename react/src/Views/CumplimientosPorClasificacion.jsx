@@ -85,7 +85,7 @@ export default function CumplimientosMesAnio() {
   const [year, setYear] = useLocalStorage('cumplimientos_mesAnio_year', null);
   const [month, setMonth] = useLocalStorage('cumplimientos_mesAnio_month', 'Todos');
   const [results, setResults] = useState([]);
-  const [classification, setClassification] = useState('General');
+  const [classification, setClassification] = useState('Todos');
     const [order, setOrder] = useState('title_asc');
 
   // Efecto: cuando los años cambien y el año guardado sea null, establecer el año al primero disponible (solo primera carga)
@@ -217,7 +217,7 @@ export default function CumplimientosMesAnio() {
       return (e.compliances || []).some(c => {
         if (c.year !== yNum) return false;
         if (month !== 'Todos' && c.month !== month) return false;
-        if (classification !== 'General' && (c.classification || e.classification) !== classification) return false;
+        if (classification !== 'Todos' && (c.classification || e.classification) !== classification) return false;
         return true;
       });
     }).sort((a,b) => {
@@ -882,6 +882,7 @@ const computeICForEnteYear = (ente, y) => {
                     <div className="col-md-3">
                       <label htmlFor="clasifEnte" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación de Ente</label>
                       <select id="clasifEnte" className="form-select" value={classification} onChange={e=>setClassification(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }}>
+                        <option value="Todos">Todos</option>
                         {classifications.map(c=>(<option key={c} value={c}>{c}</option>))}
                       </select>
                     </div>
@@ -1384,6 +1385,7 @@ const computeICForEnteYear = (ente, y) => {
 
                         <label htmlFor="clasifEnte" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación de Ente</label>
                         <select id="clasifEnte" className="form-select" value={classification} onChange={e=>setClassification(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }}>
+                          <option value="Todos">Todos</option>
                           {classifications.map(c=>(<option key={c} value={c}>{c}</option>))}
                         </select>
                       </div>
@@ -1829,13 +1831,14 @@ const computeICForEnteYear = (ente, y) => {
         <div className="card mb-3" style={{ border: 'none', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <div className="card-body" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', flex: 1, minWidth: 320 }}>
                 <form id="busqueda" className={`row g-3 ${styles.busqueda}`} onSubmit={(e)=>e.preventDefault()}>
-                        <div className="col-md-3">
+                    <div className="col-12 col-lg-4">
                           <label htmlFor="clasifEnte" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación de Ente</label>
-                          <select id="clasifEnte" className="form-select" value={classification} onChange={e=>setClassification(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px' }}>
-                            {classifications.map(c=>(<option key={c} value={c}>{c}</option>))}
-                          </select>
+                      <select id="clasifEnte" className="form-select" value={classification} onChange={e=>setClassification(e.target.value)} style={{ borderRadius: '8px', padding: '10px 14px', width: '100%' }}>
+                        <option value="Todos">Todos</option>
+                        {classifications.map(c=>(<option key={c} value={c}>{c}</option>))}
+                      </select>
                         </div>
 
                         <div className="col-md-3">
@@ -2024,6 +2027,12 @@ const computeICForEnteYear = (ente, y) => {
       )}
 
       </div>
+      {/* Footer */}
+      <footer className="bg-dark text-white text-center py-3">
+        <small>
+          © {new Date().getFullYear()} Auditoría Superior del Estado - Baja California Sur
+        </small>
+      </footer>
     </div>
   );
 }

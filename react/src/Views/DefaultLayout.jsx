@@ -10,7 +10,7 @@ export default function DefaultLayout() {
 
     // Si no hay token, redirige al login.
     if (!token) {
-        return <Navigate to="/login" />;
+        return <Navigate to="/login/b4e1c9f0a3d7e6b2c5a8f1d3e7b9c2a4" />;
     }
 
     const onLogout = (ev) => {

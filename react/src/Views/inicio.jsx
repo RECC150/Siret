@@ -486,7 +486,7 @@ export default function Inicio() {
                               }}
                             >
                               <img src={ente.img} alt={ente.title} />
-                              <h3>{ente.title}</h3>
+                              <h3 title={ente.title}>{ente.title}</h3>
                             </div>
                           ))}
                         </div>
@@ -611,7 +611,7 @@ export default function Inicio() {
       {/* Footer */}
       <footer className="bg-dark text-white text-center py-3">
         <small>
-          © 2025 Auditoría Superior del Estado - Baja California Sur
+          © {new Date().getFullYear()} Auditoría Superior del Estado - Baja California Sur
         </small>
       </footer>
     </div>
