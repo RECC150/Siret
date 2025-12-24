@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx-js-style';
+import axiosClient from '../axios-client';
 
 // Componente de exportación a Excel con vista previa HTML
 export default function SiretExportExcel(){
@@ -24,21 +25,19 @@ export default function SiretExportExcel(){
     const [sidebarVisible, setSidebarVisible] = useState(true);
     const [generando, setGenerando] = useState(false);
 
-	const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
 	useEffect(() => {
 		if (!year) return;
 		const load = async () => {
 			setLoading(true); setError(null);
 			try {
 				const [compRes, entesRes, activosRes] = await Promise.all([
-					fetch(`${apiBase}/compliances.php`),
-					fetch(`${apiBase}/entes.php`),
-					fetch(`${apiBase}/entes_activos.php?year=${year}`)
+				axiosClient.get(`/compliances`),
+				axiosClient.get(`/entes`),
+				axiosClient.get(`/entes-activos?year=${year}`)
 				]);
-				const compData = await compRes.json();
-				const entesData = await entesRes.json();
-				const activosData = await activosRes.json();
+				const compData = compRes.data;
+				const entesData = entesRes.data;
+				const activosData = activosRes.data;
                 setCompliances(Array.isArray(compData) ? compData.filter(c => String(c.year) === String(year)) : []);
                 setEntes(Array.isArray(entesData) ? entesData : []);
                 setEntesActivos(Array.isArray(activosData) ? activosData : []);
@@ -48,7 +47,7 @@ export default function SiretExportExcel(){
             } finally { setLoading(false); }
         };
         load();
-    }, [year, apiBase]);
+    }, [year]);
 
     // Generar preview automáticamente cuando los datos estén listos
     useEffect(() => {

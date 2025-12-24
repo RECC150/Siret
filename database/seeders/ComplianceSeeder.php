@@ -10,7 +10,7 @@ class ComplianceSeeder extends Seeder
     public function run()
     {
         $entes = range (1, 75);
-        $years = range(2000, 2235);
+        $years = range(2023, 2100);
         $months = [
             'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
             'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'

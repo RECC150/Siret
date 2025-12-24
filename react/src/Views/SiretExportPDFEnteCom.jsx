@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import asebcsLogo from '../assets/asebcs.jpg';
+import axiosClient from '../axios-client';
 import {
   ResponsiveContainer,
   BarChart,
@@ -27,8 +28,6 @@ export default function SiretExportPDFEnte(){
   const [generating, setGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [progress, setProgress] = useState(0);
-
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
   const sidebarWidth = 260;
   const containerStyle = {
@@ -78,11 +77,12 @@ export default function SiretExportPDFEnte(){
       setLoading(true);
       try {
         const [cRes, eRes] = await Promise.all([
-          fetch(apiBase + '/compliances.php'),
-          fetch(apiBase + '/entes.php')
+          axiosClient.get('/compliances'),
+          axiosClient.get('/entes')
         ]);
-        const [cJson, eJson] = await Promise.all([cRes.json(), eRes.json()]);
         if (!mounted) return;
+        const cJson = cRes.data;
+        const eJson = eRes.data;
         setCompliances(Array.isArray(cJson) ? cJson : []);
         setEntes(Array.isArray(eJson) ? eJson : []);
       } catch (e) {
@@ -93,7 +93,7 @@ export default function SiretExportPDFEnte(){
     };
     load();
     return () => { mounted = false; };
-  }, [apiBase, selectedEnteIdLeft, selectedEnteIdRight, selectedYears]);
+  }, [selectedEnteIdLeft, selectedEnteIdRight, selectedYears]);
 
   const selectedEnteLeft = useMemo(() => {
     return (entes || []).find(e => Number(e.id) === Number(selectedEnteIdLeft)) || null;

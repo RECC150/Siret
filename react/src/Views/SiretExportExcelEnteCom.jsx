@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { motion } from 'framer-motion';
+import axiosClient from '../axios-client';
 
 export default function SiretExportExcelEnteCom(){
   const params = new URLSearchParams(window.location.search);
@@ -30,8 +31,6 @@ export default function SiretExportExcelEnteCom(){
   // UI
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
   useEffect(() => {
     if (!selectedYears.length || (!selectedEnteIdLeft && !selectedEnteIdRight)) return;
     const load = async () => {
@@ -39,11 +38,11 @@ export default function SiretExportExcelEnteCom(){
       setError(null);
       try {
         const [compRes, entesRes] = await Promise.all([
-          fetch(`${apiBase}/compliances.php`),
-          fetch(`${apiBase}/entes.php`)
+          axiosClient.get(`/compliances`),
+          axiosClient.get(`/entes`)
         ]);
-        const compData = await compRes.json();
-        const entesData = await entesRes.json();
+        const compData = compRes.data;
+        const entesData = entesRes.data;
         setCompliances(Array.isArray(compData) ? compData : []);
         setEntes(Array.isArray(entesData) ? entesData : []);
       } catch (e) {
@@ -54,7 +53,7 @@ export default function SiretExportExcelEnteCom(){
       }
     };
     load();
-  }, [selectedYears, selectedEnteIdLeft, selectedEnteIdRight, apiBase]);
+  }, [selectedYears, selectedEnteIdLeft, selectedEnteIdRight]);
 
   const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 

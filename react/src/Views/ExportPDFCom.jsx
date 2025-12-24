@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import asebcsLogo from '../assets/asebcs.jpg';
+import axiosClient from '../axios-client';
 
 export default function SiretExportPDF(){
   const params = new URLSearchParams(window.location.search);
   const yearsParam = params.get('years'); // "2033-2034-2035"
-  const monthParam = params.get('month'); // "Todos" o nombre del mes
+  const monthsParam = params.get('months'); // "Todos" o "Enero-Febrero-Marzo"
   const years = yearsParam ? yearsParam.split('-').map(y => parseInt(y, 10)) : [];
-  const month = monthParam || 'Todos';
+  const selectedMonths = monthsParam && monthsParam !== 'Todos' ? monthsParam.split('-') : [];
 
   const [compliances, setCompliances] = useState([]);
   const [entes, setEntes] = useState([]);
@@ -19,28 +20,26 @@ export default function SiretExportPDF(){
   const [progress, setProgress] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
   useEffect(() => {
     if (years.length === 0) return;
     const load = async () => {
       setError(null);
       try {
         const [compRes, entesRes] = await Promise.all([
-          fetch(`${apiBase}/compliances.php`),
-          fetch(`${apiBase}/entes.php`)
+          axiosClient.get(`/compliances`),
+          axiosClient.get(`/entes`)
         ]);
-        const compData = await compRes.json();
-        const entesData = await entesRes.json();
+        const compData = compRes.data;
+        const entesData = entesRes.data;
 
         // Filtrar cumplimientos por años seleccionados
         let filtered = Array.isArray(compData)
           ? compData.filter(c => years.includes(parseInt(c.year, 10)))
           : [];
 
-        // Si se seleccionó un mes específico, filtrar también por mes
-        if (month && month !== 'Todos') {
-          filtered = filtered.filter(c => c.month === month);
+        // Si se seleccionaron meses específicos, filtrar también por meses
+        if (selectedMonths.length > 0) {
+          filtered = filtered.filter(c => selectedMonths.includes(c.month));
         }
 
         setCompliances(filtered);
@@ -51,7 +50,7 @@ export default function SiretExportPDF(){
       }
     };
     load();
-  }, [years, month, apiBase]);
+  }, [years, selectedMonths]);
 
   const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const monthsShort = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];

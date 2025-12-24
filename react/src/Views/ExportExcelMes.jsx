@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx-js-style';
 import { motion } from 'framer-motion';
+import axiosClient from '../axios-client';
 
 export default function SiretExportExcelMes(){
     const params = new URLSearchParams(window.location.search);
@@ -25,8 +26,6 @@ export default function SiretExportExcelMes(){
     // UI
     const [sidebarVisible, setSidebarVisible] = useState(true);
 
-    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
     useEffect(() => {
         if (!year || !month) return;
         const load = async () => {
@@ -34,13 +33,13 @@ export default function SiretExportExcelMes(){
             setError(null);
             try {
                 const [compRes, entesRes, activosRes] = await Promise.all([
-                    fetch(`${apiBase}/compliances.php`),
-                    fetch(`${apiBase}/entes.php`),
-                    fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(year)}`)
+                    axiosClient.get(`/compliances`),
+                    axiosClient.get(`/entes`),
+                    axiosClient.get(`/entes-activos?year=${encodeURIComponent(year)}`)
                 ]);
-                const compData = await compRes.json();
-                const entesData = await entesRes.json();
-                const activosData = await activosRes.json();
+                const compData = compRes.data;
+                const entesData = entesRes.data;
+                const activosData = activosRes.data;
 
                 setCompliances(Array.isArray(compData) ? compData.filter(c => String(c.year) === String(year) && c.month === month) : []);
                 setEntes(Array.isArray(entesData) ? entesData : []);
@@ -53,7 +52,7 @@ export default function SiretExportExcelMes(){
             }
         };
         load();
-    }, [year, month, apiBase]);
+    }, [year, month]);
 
     // Calcular estadísticas del mes
     const monthStats = useMemo(() => {

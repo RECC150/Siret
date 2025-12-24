@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import styles from "./css/CumplimientosMesAnio.module.css";
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import axiosClient from '../axios-client';
 
 import ASEBCS from "../assets/asebcs.jpg";
 import a from "../assets/a.png";
@@ -224,9 +225,9 @@ export default function CumplimientosMesAnio() {
       const yearNum = parseInt(year, 10);
       if (month === 'Todos') {
         // check if any compliance in that year
-        return e.compliances.some(c => c.year === yearNum);
+        return (e.compliances || []).some(c => c.year === yearNum);
       } else {
-        return e.compliances.some(c => c.year === yearNum && c.month === month);
+        return (e.compliances || []).some(c => c.year === yearNum && c.month === month);
       }
     });
     filtered.sort((a, b) => a.title.localeCompare(b.title));
@@ -477,17 +478,14 @@ export default function CumplimientosMesAnio() {
 
   useEffect(() => {
     let mounted = true;
-    // Usar URL absoluta apuntando a Laragon/Apache (puerto 80)
-    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes.php`;
-    fetch(apiUrl)
+    // OPTIMIZACIÓN: Cargar solo compliances del año seleccionado
+    const yearFilter = year || new Date().getFullYear();
+    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes?with_compliances=1&year=${yearFilter}`;
+    axiosClient.get(apiUrl)
       .then(res => {
-        if (!res.ok) throw new Error('no-api');
-        return res.json();
-      })
-      .then(json => {
         if (!mounted) return;
-        if (Array.isArray(json)) {
-          setEntesList(json);
+        if (Array.isArray(res.data)) {
+          setEntesList(res.data);
         } else {
           setEntesList(entesListFallback);
         }
@@ -497,7 +495,7 @@ export default function CumplimientosMesAnio() {
         if (mounted) setEntesList(entesListFallback);
       });
     return () => { mounted = false; };
-  }, []);
+  }, [year]);
 
   // helper: obtener estado para mes/año de un ente
   const getStatusForMonthYear = (ente, monthName, yearNum) => {
@@ -871,7 +869,7 @@ useEffect(() => {
                     <h5 className={`mb-1 ${styles.listGroupTitle}`} style={{fontWeight: 700, color: '#440D1E'}}>{r.title}</h5>
                     <p className="mb-1"><small style={{fontSize: 14, color: '#6c757d'}}>{r.classification}</small></p>
                     <div className={styles.listGroupBadges}>
-                      {r.compliances.filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
+                      {(r.compliances || []).filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
                         .map((c, i) => {
                           const variant = getBadgeVariant(c.status);
                           return (<span key={i} className={`badge ${variant} me-2`} title={tipoLabels[c.status]}>{c.month} {c.year}</span>);

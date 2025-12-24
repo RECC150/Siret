@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import styles from "./css/CumplimientosMesAnio.module.css";
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import axiosClient from '../axios-client';
 
 import ASEBCS from "../assets/asebcs.jpg";
 import a from "../assets/a.png";
@@ -224,13 +225,13 @@ export default function CumplimientosMesAnio() {
       if (order === 'title_asc') return a.title.localeCompare(b.title);
       if (order === 'title_desc') return b.title.localeCompare(a.title);
       if (order === 'year_asc') {
-        const ay = Math.min(...a.compliances.map(c=>c.year));
-        const by = Math.min(...b.compliances.map(c=>c.year));
+        const ay = Math.min(...(a.compliances || []).map(c=>c.year));
+        const by = Math.min(...(b.compliances || []).map(c=>c.year));
         return ay - by;
       }
       if (order === 'year_desc') {
-        const ay = Math.max(...a.compliances.map(c=>c.year));
-        const by = Math.max(...b.compliances.map(c=>c.year));
+        const ay = Math.max(...(a.compliances || []).map(c=>c.year));
+        const by = Math.max(...(b.compliances || []).map(c=>c.year));
         return by - ay;
       }
       return 0;
@@ -491,17 +492,14 @@ export default function CumplimientosMesAnio() {
 
   useEffect(() => {
     let mounted = true;
-    // Usar URL absoluta apuntando a Laragon/Apache (puerto 80)
-    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes.php`;
-    fetch(apiUrl)
+    // OPTIMIZACIÓN: Cargar solo compliances del año seleccionado
+    const yearFilter = year || new Date().getFullYear();
+    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes?with_compliances=1&year=${yearFilter}`;
+    axiosClient.get(apiUrl)
       .then(res => {
-        if (!res.ok) throw new Error('no-api');
-        return res.json();
-      })
-      .then(json => {
         if (!mounted) return;
-        if (Array.isArray(json)) {
-          setEntesList(json);
+        if (Array.isArray(res.data)) {
+          setEntesList(res.data);
         } else {
           setEntesList(entesListFallback);
         }
@@ -511,7 +509,7 @@ export default function CumplimientosMesAnio() {
         if (mounted) setEntesList(entesListFallback);
       });
     return () => { mounted = false; };
-  }, []);
+  }, [year]);
 
   // helper: obtener estado para mes/año de un ente
   const getStatusForMonthYear = (ente, monthName, yearNum) => {
@@ -918,7 +916,7 @@ const computeICForEnteYear = (ente, y) => {
                     <h5 className={`mb-1 ${styles.listGroupTitle}`} style={{fontWeight: 700, color: '#440D1E'}}>{r.title}</h5>
                     <p className="mb-1"><small style={{fontSize: 14, color: '#6c757d'}}>{r.classification}</small></p>
                     <div className={styles.listGroupBadges}>
-                      {r.compliances.filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
+                      {(r.compliances || []).filter(c => c.year === parseInt(year, 10) && (month === 'Todos' ? true : c.month === month))
                         .map((c, i) => {
                           const variant = getBadgeVariant(c.status);
                           return (<span key={i} className={`badge ${variant} me-2`} title={tipoLabels[c.status]}>{c.month} {c.year}</span>);
@@ -1375,12 +1373,7 @@ const computeICForEnteYear = (ente, y) => {
                 </div>
               </div>
               <form id="busqueda" className={`row g-3 ${styles.busqueda}`} onSubmit={(e)=>e.preventDefault()}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <h4 className="mb-0"></h4>
-                            <div>
-                              <button className="btn btn-sm btn-outline-primary" onClick={() => { /* export placeholder */ }}>Exportar gráfica</button>
-                            </div>
-                          </div>
+
                       <div className="col-md-3">
 
                         <label htmlFor="clasifEnte" className="form-label" style={{ fontWeight: 500, color: '#495057' }}>Clasificación de Ente</label>

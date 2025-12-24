@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Label, PieChart, Pie, Cell } from 'recharts';
 import ASEBCS from '../assets/asebcs.jpg';
 import Comparativa from './SiretComparativa';
+import axiosClient from '../axios-client';
 
 // Componentes de gráfico consistentes con CumplimientosMesAnio
 const monthAbbr = {
@@ -158,19 +159,26 @@ export default function SiretExportacion(){
     const load = async () => {
       setLoading(true);
       try {
-        const [cRes, eRes, clRes] = await Promise.all([
-          fetch(apiBase + '/compliances.php'),
-          fetch(apiBase + '/entes.php'),
-          fetch(apiBase + '/clasificaciones.php')
+        // Cargar en paralelo: entes, clasificaciones, años disponibles, y compliances
+        const [eRes, clRes, yearsRes, cRes] = await Promise.all([
+          axiosClient.get('/entes'),
+          axiosClient.get('/clasificaciones'),
+          axiosClient.get('/compliances?fields=year'),
+          axiosClient.get('/compliances?limit=2000')
         ]);
-        const [cJson, eJson, clJson] = await Promise.all([cRes.json(), eRes.json(), clRes.json()]);
-        setCompliances(Array.isArray(cJson) ? cJson : []);
-        setEntes(Array.isArray(eJson) ? eJson : []);
-        setClasificaciones(Array.isArray(clJson) ? clJson : []);
-        const years = (Array.isArray(cJson) ? cJson.map(r=>String(r.year)).filter(Boolean) : []);
+
+        setEntes(Array.isArray(eRes.data) ? eRes.data : []);
+        setClasificaciones(Array.isArray(clRes.data) ? clRes.data : []);
+
+        const years = Array.isArray(yearsRes.data) ? yearsRes.data.map(r=>String(r.year)).filter(Boolean) : [];
         const uniqueYears = Array.from(new Set(years)).sort((a,b)=>Number(b)-Number(a));
         setDisplayYears(uniqueYears);
-      } catch(err){ console.error(err); } finally { setLoading(false); }
+
+        // Cargar compliances
+        setCompliances(Array.isArray(cRes.data) ? cRes.data : []);
+
+      } catch(err){ console.error(err); }
+      finally { setLoading(false); }
     };
     load();
   }, [apiBase]);
@@ -183,24 +191,31 @@ export default function SiretExportacion(){
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // OPTIMIZACIÓN: Cargar entes activos bajo demanda (solo cuando se expande un año)
+  const loadEntesActivosForYear = React.useCallback(async (year) => {
+    setEntesActivosByYear(prev => {
+      const key = String(year);
+      if (prev[key]) return prev; // ya cargado
+
+      // Cargar de forma asincrónica
+      axiosClient.get(`/entes-activos?year=${encodeURIComponent(year)}`)
+        .then(res => {
+          const arr = Array.isArray(res.data) ? res.data : [];
+          setEntesActivosByYear(p => ({ ...p, [key]: arr }));
+        })
+        .catch(e => console.error(e));
+
+      return prev;
+    });
+  }, []);
+
   // Cargar entes activos para todos los años disponibles
   useEffect(() => {
     if (!displayYears.length) return;
     displayYears.forEach(year => {
-      const key = String(year);
-      if (entesActivosByYear[key]) return; // ya cargado
-      const load = async () => {
-        try {
-          const res = await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(year)}`);
-          const json = await res.json();
-          // Guardar los objetos completos, no solo los IDs
-          const arr = Array.isArray(json) ? json : [];
-          setEntesActivosByYear(prev => ({ ...prev, [key]: arr }));
-        } catch(e){ console.error(e); }
-      };
-      load();
+      loadEntesActivosForYear(year);
     });
-  }, [displayYears, apiBase, entesActivosByYear]);
+  }, [displayYears, loadEntesActivosForYear]);
 
   const latestYear = useMemo(()=>{
     if (!displayYears.length) return null;
@@ -283,7 +298,6 @@ export default function SiretExportacion(){
     const currentlySelected = Object.keys(current).filter(k => current[k]).length;
     const isEnabling = !current[y];
     if (isEnabling && currentlySelected >= 3) {
-      try { window.alert('Puede seleccionar hasta 3 años como máximo.'); } catch (e) { /* ignore */ }
       return;
     }
     if (!isEnabling) {
@@ -298,12 +312,22 @@ export default function SiretExportacion(){
       ...ente,
       compliances: compliances.filter(c => Number(c.ente_id) === Number(ente.id))
     };
-    const yearsArr = Array.from(new Set(enriched.compliances.map(c => c.year))).sort((a,b)=>b-a);
 
-    // Solo establecer los primeros 3 años si enabledYears está vacío (primera vez que se abre)
-    if (Object.keys(enabledYears).length === 0) {
+    // Usar todos los años disponibles en el sistema
+    const yearsArr = displayYears.map(y => parseInt(y, 10)).sort((a,b)=>b-a);
+    const enteYearsArr = Array.from(new Set((enriched.compliances || []).map(c => c.year))).sort((a,b)=>b-a);
+
+    // Activar solo el año más reciente por defecto (si tiene datos para ese año)
+    if (yearsArr.length > 0) {
       const defaults = {};
-      yearsArr.forEach((y, idx) => { defaults[y] = idx < 3; });
+      yearsArr.forEach(y => { defaults[y] = false; });
+      // Activar el año más reciente que tiene datos para este ente
+      if (enteYearsArr.length > 0) {
+        defaults[enteYearsArr[0]] = true;
+      } else {
+        // Si no tiene datos, activar el año más reciente disponible
+        defaults[yearsArr[0]] = true;
+      }
       setEnabledYears(defaults);
     }
 
@@ -311,11 +335,11 @@ export default function SiretExportacion(){
     setSelectedEnte(enriched);
 
     // Inicializar selects de exportación (por defecto: último año y último mes con dato)
-    if (yearsArr.length) {
-      const defaultYear = String(yearsArr[0]);
+    if (enteYearsArr.length) {
+      const defaultYear = String(enteYearsArr[0]);
       setEnteExportYear(defaultYear);
       const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-      const itemsForYear = enriched.compliances.filter(c => String(c.year) === defaultYear);
+      const itemsForYear = (enriched.compliances || []).filter(c => String(c.year) === defaultYear);
       const monthsWithData = monthsOrder.filter(m => itemsForYear.some(c => c.month === m));
       setEnteExportMonth(monthsWithData.length ? monthsWithData[monthsWithData.length - 1] : 'Enero');
     } else {
@@ -433,42 +457,99 @@ export default function SiretExportacion(){
     alert(`Exportar Excel del año ${year} (próximamente)`);
   };
 
-  const handleExportSQLYear = (year) => {
+  const handleExportSQLYear = async (year) => {
     if (!year || !compliances) return;
+
+    // Asegurar que se cargan los entes activos para este año
+    await new Promise((resolve) => {
+      const key = String(year);
+      if (entesActivosByYear[key]) {
+        resolve();
+        return;
+      }
+
+      // Cargar entes activos si no están cargados
+      axiosClient.get(`/entes-activos?year=${encodeURIComponent(year)}`)
+        .then(res => {
+          const arr = Array.isArray(res.data) ? res.data : [];
+          setEntesActivosByYear(prev => {
+            const updated = { ...prev, [key]: arr };
+            resolve();
+            return updated;
+          });
+        })
+        .catch(e => {
+          console.error(e);
+          resolve(); // continuar de todas formas
+        });
+    });
 
     // Filtrar cumplimientos del año
     const yearCompliances = (compliances || []).filter(c => String(c.year) === String(year));
 
-    // Filtrar entes activos del año
+    // Filtrar entes activos del año (ahora está garantizado que están cargados)
     const yearEntesActivos = (entesActivosByYear[String(year)] || []);
+
+    // Ordenar entes activos por ente_id para consistencia
+    const sortedEntesActivos = [...yearEntesActivos].sort((a, b) => Number(a.ente_id) - Number(b.ente_id));
+
+    // Ordenar cumplimientos por mes (orden cronológico) y luego por ente_id
+    const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const sortedCompliances = [...yearCompliances].sort((a, b) => {
+      const monthDiff = monthsOrder.indexOf(a.month) - monthsOrder.indexOf(b.month);
+      if (monthDiff !== 0) return monthDiff;
+      return Number(a.ente_id) - Number(b.ente_id);
+    });
+
+    // Función helper para formatear fecha de manera consistente
+    const formatDate = (dateStr) => {
+      if (!dateStr) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+      try {
+        // Si es formato ISO con Z, convertir a formato MySQL
+        if (dateStr.includes('T') && dateStr.includes('Z')) {
+          return dateStr.slice(0, 19).replace('T', ' ');
+        }
+        // Si ya está en formato MySQL, retornar tal cual
+        if (dateStr.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
+          return dateStr;
+        }
+        // Intentar parsear y reformatear
+        return new Date(dateStr).toISOString().slice(0, 19).replace('T', ' ');
+      } catch (e) {
+        return new Date().toISOString().slice(0, 19).replace('T', ' ');
+      }
+    };
 
     // Construir SQL
     let sql = `-- ============================================\n`;
-    sql += `-- SQL Export para Año ${year}\n`;
-    sql += `-- Generado: ${new Date().toLocaleString()}\n`;
+    sql += `-- SIRET - Exportación SQL del Año ${year}\n`;
+    sql += `-- Generado: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Hermosillo' })}\n`;
     sql += `-- ============================================\n`;
-    sql += `-- Este archivo contiene:\n`;
-    sql += `-- 1. Cumplimientos (${yearCompliances.length} registros)\n`;
-    sql += `-- 2. Entes Activos (${yearEntesActivos.length} registros)\n`;
+    sql += `-- Resumen de datos:\n`;
+    sql += `--   • Entes Activos: ${sortedEntesActivos.length} registros\n`;
+    sql += `--   • Cumplimientos: ${sortedCompliances.length} registros\n`;
     sql += `-- ============================================\n\n`;
 
     sql += `USE siret;\n\n`;
 
-    // OPCIONAL: Descomentar para eliminar datos existentes del año
-    sql += `-- ADVERTENCIA: Descomentar las siguientes líneas eliminará los datos existentes del año ${year}\n`;
+    sql += `-- ============================================\n`;
+    sql += `-- PASO 1: Limpieza de datos existentes (OPCIONAL)\n`;
+    sql += `-- ============================================\n`;
+    sql += `-- ADVERTENCIA: Descomentar solo si desea eliminar los datos existentes del año ${year}\n`;
     sql += `-- DELETE FROM compliances WHERE year = ${year};\n`;
     sql += `-- DELETE FROM entes_activos WHERE year = ${year};\n\n`;
 
-    // INSERT para entes_activos (primero, ya que compliances depende de que los entes estén activos)
+    // INSERT para entes_activos
     sql += `-- ============================================\n`;
-    sql += `-- Entes Activos del año ${year}\n`;
+    sql += `-- PASO 2: Entes Activos del año ${year}\n`;
     sql += `-- ============================================\n`;
-    if (yearEntesActivos.length > 0) {
-      sql += `-- Insertar entes activos (ignorar duplicados)\n`;
-      sql += `INSERT IGNORE INTO entes_activos (ente_id, year, created_at) VALUES\n`;
-      sql += yearEntesActivos.map((ea, idx) => {
-        const createdAt = ea.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
-        return `(${ea.ente_id}, ${year}, '${createdAt}')`;
+    if (sortedEntesActivos.length > 0) {
+      sql += `-- Insertar entes activos (ignorar duplicados si ya existen)\n`;
+      sql += `INSERT IGNORE INTO entes_activos (ente_id, year, created_at, updated_at) VALUES\n`;
+      sql += sortedEntesActivos.map((ea, idx) => {
+        const createdAt = formatDate(ea.created_at);
+        const updatedAt = formatDate(ea.updated_at || ea.created_at);
+        return `(${ea.ente_id}, ${year}, '${createdAt}', '${updatedAt}')`;
       }).join(',\n');
       sql += `;\n\n`;
     } else {
@@ -477,15 +558,16 @@ export default function SiretExportacion(){
 
     // INSERT para compliances
     sql += `-- ============================================\n`;
-    sql += `-- Cumplimientos del año ${year}\n`;
+    sql += `-- PASO 3: Cumplimientos del año ${year}\n`;
     sql += `-- ============================================\n`;
-    if (yearCompliances.length > 0) {
-      sql += `-- Insertar cumplimientos\n`;
-      sql += `INSERT INTO compliances (ente_id, year, month, status, note, created_at) VALUES\n`;
-      sql += yearCompliances.map((c, idx) => {
-        const note = c.note ? `'${(c.note || '').replace(/'/g, "''")}'` : 'NULL';
-        const createdAt = c.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
-        return `(${c.ente_id}, ${c.year}, '${c.month}', '${c.status}', ${note}, '${createdAt}')`;
+    if (sortedCompliances.length > 0) {
+      sql += `-- Insertar cumplimientos (ordenados por mes y ente)\n`;
+      sql += `INSERT INTO compliances (ente_id, year, month, status, note, created_at, updated_at) VALUES\n`;
+      sql += sortedCompliances.map((c, idx) => {
+        const note = c.note ? `'${String(c.note).replace(/'/g, "''")}'` : 'NULL';
+        const createdAt = formatDate(c.created_at);
+        const updatedAt = formatDate(c.updated_at || c.created_at);
+        return `(${c.ente_id}, ${c.year}, '${c.month}', '${c.status}', ${note}, '${createdAt}', '${updatedAt}')`;
       }).join(',\n');
       sql += `;\n\n`;
     } else {
@@ -493,7 +575,8 @@ export default function SiretExportacion(){
     }
 
     sql += `-- ============================================\n`;
-    sql += `-- Fin del export\n`;
+    sql += `-- Exportación completada exitosamente\n`;
+    sql += `-- Total de registros: ${sortedEntesActivos.length + sortedCompliances.length}\n`;
     sql += `-- ============================================\n`;
 
     // Descargar archivo
@@ -501,7 +584,7 @@ export default function SiretExportacion(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `siret_sql_${year}.sql`;
+    a.download = `siret_export_${year}.sql`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -702,12 +785,19 @@ export default function SiretExportacion(){
           <h2 style={{ fontWeight: 700, color: '#681b32', margin: 0 }}>Exportación</h2>
         </div>
 
-        {displayYears.length === 0 && (
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '280px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '50px', height: '50px', border: '4px solid #f0f0f0', borderTop: '4px solid #681b32', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+              <p style={{ margin: 0, color: '#6c757d' }}>Cargando años...</p>
+            </div>
+          </div>
+        ) : displayYears.length === 0 ? (
           <div className="card card-body mb-3" style={{ border: 'none', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             <p style={{ margin: 0, color: '#6c757d' }}>No hay años disponibles.</p>
           </div>
-        )}
-
+        ) : (
+          <>
         {displayYears.map((year) => {
           const collapseId = `yearExport_${year}`;
           const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -962,6 +1052,8 @@ export default function SiretExportacion(){
             </div>
           );
         })}
+          </>
+        )}
       </section>
       )}
 
@@ -1009,6 +1101,20 @@ export default function SiretExportacion(){
               </div>
             </div>
           </div>
+
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '280px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '50px', height: '50px', border: '4px solid #f0f0f0', borderTop: '4px solid #681b32', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+                <p style={{ margin: 0, color: '#6c757d' }}>Cargando entes...</p>
+              </div>
+            </div>
+          ) : entes.length === 0 ? (
+            <div className="card card-body mb-3" style={{ border: 'none', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+              <p style={{ margin: 0, color: '#6c757d' }}>No hay entes disponibles.</p>
+            </div>
+          ) : (
+            <>
           <div className="card card-body" style={{ border: 'none', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
             {(() => {
               const term = (entesSearch || '').trim().toLowerCase();
@@ -1051,6 +1157,8 @@ export default function SiretExportacion(){
               );
             })()}
           </div>
+          </>
+          )}
         </section>
       )}
 
@@ -1375,6 +1483,7 @@ export default function SiretExportacion(){
       {selectedEnte && (
         <div className={`modal-backdrop${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) closeEnteModal(); }} role="dialog" aria-modal="true" style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2600, padding: windowWidth < 768 ? 8 : 0 }}>
           <div className={`modal-content${closingModalIndex === 'selectedEnte' ? ' closing' : ''}`} style={{ width: windowWidth < 768 ? '100%' : '95%', maxWidth: windowWidth < 768 ? '100%' : 1100, maxHeight: windowWidth < 768 ? '95vh' : '90vh', background: '#fff', borderRadius: windowWidth < 768 ? 0 : 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }} onClick={(e)=>e.stopPropagation()}>
+            {/* HEADER CON TÍTULO Y TABS */}
             <div style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: windowWidth < 768 ? '12px 16px' : 20, paddingLeft: windowWidth < 768 ? 16 : 24, flexShrink: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
@@ -1420,94 +1529,20 @@ export default function SiretExportacion(){
               </div>
             </div>
 
+            {/* CONTENIDO DEL MODAL - SECCIONES */}
             <div style={{ padding: 20, background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)', overflowY: 'auto', flex: 1 }}>
-            {activeSection === 'indicadores' && (
-              <div className="card card-body mb-3">
-                <h6>Indicadores de Cumplimiento</h6>
-                {/* Selectores de años */}
-                <div style={{ background: '#fff', padding: 12, borderRadius: 8, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                  {(() => {
-                    const yearsArr = (Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a));
-                    const selectedCount = yearsArr.filter(y => enabledYears[y] ?? false).length;
-                    return (
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {yearsArr.map(y => {
-                          const checked = enabledYears[y] ?? false;
-                          const disabled = !checked && selectedCount >= 3;
-                          return (
-                            <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: disabled ? 'not-allowed' : 'pointer', padding: '6px 10px', borderRadius: 6, background: checked ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f8f9fa', border: '1px solid #e9ecef', opacity: disabled ? 0.5 : 1, color: checked ? '#fff' : '#495057' }}>
-                              <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggleYear(y)} />
-                              <span style={{ fontWeight: checked ? 700 : 500 }}>{y}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th style={{ minWidth: 120 }}>Año</th>
-                        {(Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a))
-                          .filter(y => enabledYears[y] ?? true)
-                          .map(y => <th key={y} className="text-center">{y}</th>)
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={{ background: '#f8f9fa', fontWeight: 700 }}>
-                        <td>IC</td>
-                        {(Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a))
-                          .filter(y => enabledYears[y] ?? true)
-                          .map(y => {
-                            const ic = computeICForEnteYear(selectedEnte, y);
-                            return (
-                              <td key={y} className="text-center">{ic !== null ? `${ic}%` : '-'}</td>
-                            );
-                          })}
-                      </tr>
 
-                      {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((mName) => {
-                        const yearsToShow = (Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a)).filter(y => enabledYears[y] ?? true);
-                        if (yearsToShow.length === 0) return null;
-                        return (
-                          <tr key={mName}>
-                            <td><strong>{mName}</strong></td>
-                            {yearsToShow.map(y => {
-                              const status = getStatusForMonthYear(selectedEnte, mName, y);
-                              const color = statusColor(status);
-                              return (
-                                <td key={String(y)} className="text-center" style={{ verticalAlign: 'middle', minWidth: 80 }}>
-                                  {status ? (
-                                    <div title={`${status}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 14, background: color, color: '#fff', fontSize: 12, fontWeight: 700 }}>
-                                      {status[0].toUpperCase()}
-                                    </div>
-                                  ) : (
-                                    <div title="Sin dato" style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 8, background: '#e9ecef' }} />
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'graficas' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <div style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                  {(() => {
-                    const yearsArr = (Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a));
-                    const selectedCount = yearsArr.filter(y => enabledYears[y] ?? false).length;
-                    return (
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* SECCIÓN INDICADORES */}
+              {activeSection === 'indicadores' && (
+                <div className="card card-body mb-3">
+                  <h6>Indicadores de Cumplimiento</h6>
+                  {/* Selectores de años */}
+                  <div style={{ background: '#fff', padding: 12, borderRadius: 8, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    {(() => {
+                      const yearsArr = (Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a));
+                      const selectedCount = yearsArr.filter(y => enabledYears[y] ?? false).length;
+                      return (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
                           {yearsArr.map(y => {
                             const checked = enabledYears[y] ?? false;
                             const disabled = !checked && selectedCount >= 3;
@@ -1519,211 +1554,293 @@ export default function SiretExportacion(){
                             );
                           })}
                         </div>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {yearsArr.filter(y => enabledYears[y] ?? false).map(y => {
-                            const ic = computeICForEnteYear(selectedEnte, y);
-                            return (
-                              <div key={y} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '6px 12px', borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
-                                IC {y} = {ic !== null ? `${ic}%` : '-'}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div style={{ width: '100%', height: 320, background: '#fff', border: '1px solid #e9ecef', borderRadius: 12 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={buildBarDataForEnte(selectedEnte)}
-                      margin={{ top: 10, right: 30, left: -30, bottom: 40 }}
-                      barCategoryGap="20%"
-                      barGap={1}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={<CustomXAxisTick />}>
-                        <Label content={<CustomYearsLabel enabledYears={enabledYears} />} position="bottom" />
-                      </XAxis>
-                      <YAxis
-                        domain={[0, 2]}
-                        allowDecimals={false}
-                        axisLine={false}
-                        tick={false}
-                      />
-                      <Tooltip content={<CustomBarTooltip />} />
-                      {(Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort()).map((y) => {
-                        const enabled = enabledYears[y] ?? true;
-                        if (!enabled) return null;
-                        const keyBase = String(y);
-                        const colors = { cumplio: '#28a745', parcial: '#ffc107', no: '#dc3545' };
-                        return (
-                          <React.Fragment key={keyBase}>
-                            <Bar
-                              dataKey={`${keyBase}_no`}
-                              stackId={keyBase}
-                              fill={colors.no}
-                              stroke="#991b1b"
-                              strokeWidth={1.8}
-                              fillOpacity={0.98}
-                              radius={[6, 6, 0, 0]}
-                            />
-                            <Bar
-                              dataKey={`${keyBase}_parcial`}
-                              stackId={keyBase}
-                              fill={colors.parcial}
-                              stroke="#B59B05"
-                              strokeWidth={1.8}
-                              fillOpacity={0.98}
-                              radius={[6, 6, 0, 0]}
-                            />
-                            <Bar
-                              dataKey={`${keyBase}_cumplio`}
-                              stackId={keyBase}
-                              fill={colors.cumplio}
-                              stroke="#277A3A"
-                              strokeWidth={1.8}
-                              fillOpacity={0.98}
-                              radius={[6, 6, 0, 0]}
-                            />
-                          </React.Fragment>
-                        );
-                      })}
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="table table-sm">
+                      <thead>
+                        <tr>
+                          <th style={{ minWidth: 120 }}>Año</th>
+                          {(Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a))
+                            .filter(y => enabledYears[y] ?? true)
+                            .map(y => <th key={y} className="text-center">{y}</th>)
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ background: '#f8f9fa', fontWeight: 700 }}>
+                          <td>IC</td>
+                          {(Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a))
+                            .filter(y => enabledYears[y] ?? true)
+                            .map(y => {
+                              const ic = computeICForEnteYear(selectedEnte, y);
+                              return (
+                                <td key={y} className="text-center">{ic !== null ? `${ic}%` : '-'}</td>
+                              );
+                            })}
+                        </tr>
 
-                <div style={{ width: '100%', maxHeight: 340, overflowY: 'auto', marginTop: 6 }}>
-                  <h6 style={{ marginTop: 6, position: 'sticky', background: '#fff', zIndex: 6, padding: '16px 0' }}>Cumplimientos por año</h6>
-                  {(() => {
-                    const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-                    const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]).map(y => parseInt(y, 10)).sort((a, b) => b - a);
-                    if (yearsSelected.length === 0) return <div className="text-muted">No hay años seleccionados.</div>;
-                    const groups = yearsSelected.map(y => {
-                      const items = (selectedEnte.compliances || []).filter(c => c.year === y);
-                      const ordered = months.map(mn => items.find(it => it.month === mn)).filter(Boolean);
-                      return { year: y, items: ordered };
-                    });
-
-                    const getBadgeVariant = (status) => {
-                      const s = (status || '').toString().toLowerCase();
-                      if (!s) return 'bg-secondary';
-                      if (s === 'cumplio') return 'bg-success';
-                      if (s === 'parcial' || s === 'partial') return 'bg-warning text-dark';
-                      if (s === 'no' || s === 'nocumple' || s === 'n') return 'bg-danger';
-                      return 'bg-secondary';
-                    };
-
-                    return (
-                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, yearsSelected.length)}, 1fr)`, gap: 12 }}>
-                        {groups.map(g => (
-                          <div key={g.year} className="p-2 rounded" style={{marginTop: 6, background: '#fff', border: '1px solid #e9ecef' }}>
-                            <div style={{background: '#fff', borderBottom: '1px solid #eef', marginTop: 12, position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <strong>{g.year}</strong>
-                              <small className="text-muted">{g.items.length} meses</small>
-                            </div>
-                            {g.items.length === 0 ? (
-                              <div className="text-muted">No hay registros para este año.</div>
-                            ) : (
-                              <ul className="list-group list-group-flush">
-                                {g.items.map((c, idx) => (
-                                  <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
-                                    <div><strong>{c.month}</strong></div>
-                                    <span className={`badge ${getBadgeVariant(c.status)}`}>{tipoLabels[c.status]}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
-            </div>
-
-            <div style={{ padding: windowWidth < 480 ? 12 : 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 8, flexWrap: windowWidth < 480 ? 'wrap' : 'nowrap' }}>
-              {selectedEnte && (
-                <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: windowWidth < 480 ? 6 : 10, flexWrap: 'wrap' }}>
-                  {(() => {
-                    const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]).map(y => parseInt(y, 10)).sort((a, b) => b - a);
-                    const yearsParam = yearsSelected.join('-');
-                    const canExport = yearsSelected.length > 0;
-                    return (
-                      <>
-                        <a
-                          href={canExport ? `/SiretExportPDFEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
-                          style={{
-                            background:'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
-                            color:'#fff',
-                            border:'none',
-                            padding: windowWidth < 480 ? '6px 10px' : '8px 14px',
-                            fontWeight:600,
-                            borderRadius:8,
-                            fontSize: windowWidth < 480 ? 11 : 13,
-                            cursor:'pointer',
-                            boxShadow:'0 2px 6px rgba(220,53,69,0.35)',
-                            transition:'all 0.2s ease',
-                            display:'flex',
-                            alignItems:'center',
-                            gap: windowWidth < 480 ? 3 : 6,
-                            textDecoration:'none',
-                            pointerEvents: canExport ? 'auto' : 'none',
-                            opacity: canExport ? 1 : 0.6,
-                            whiteSpace: 'nowrap'
-                          }}
-                          title={canExport ? 'Exportar PDF' : 'Seleccione al menos un año'}
-                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
-                        >
-                          {windowWidth < 480 ? null : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                              <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                            </svg>
-                          )}
-                          {windowWidth < 480 ? 'PDF' : 'Exportar PDF'}
-                        </a>
-                        <a
-                          href={canExport ? `/SiretExportExcelEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#'}
-                          style={{
-                            background:'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
-                            color:'#fff',
-                            border:'none',
-                            padding: windowWidth < 480 ? '6px 10px' : '8px 14px',
-                            fontWeight:600,
-                            borderRadius:8,
-                            fontSize: windowWidth < 480 ? 11 : 13,
-                            cursor:'pointer',
-                            boxShadow:'0 2px 6px rgba(20,83,45,0.35)',
-                            transition:'all 0.2s ease',
-                            display:'flex',
-                            alignItems:'center',
-                            gap: windowWidth < 480 ? 3 : 6,
-                            textDecoration:'none',
-                            pointerEvents: canExport ? 'auto' : 'none',
-                            opacity: canExport ? 1 : 0.6,
-                            whiteSpace: 'nowrap'
-                          }}
-                          title={canExport ? 'Exportar Excel' : 'Seleccione al menos un año'}
-                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
-                        >
-                          {windowWidth < 480 ? null : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                              <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                            </svg>
-                          )}
-                          {windowWidth < 480 ? 'Excel' : 'Exportar Excel'}
-                        </a>
-                      </>
-                    );
-                  })()}
+                        {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((mName) => {
+                          const yearsToShow = (Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a)).filter(y => enabledYears[y] ?? true);
+                          if (yearsToShow.length === 0) return null;
+                          return (
+                            <tr key={mName}>
+                              <td><strong>{mName}</strong></td>
+                              {yearsToShow.map(y => {
+                                const status = getStatusForMonthYear(selectedEnte, mName, y);
+                                const color = statusColor(status);
+                                return (
+                                  <td key={String(y)} className="text-center" style={{ verticalAlign: 'middle', minWidth: 80 }}>
+                                    {status ? (
+                                      <div title={`${status}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 14, background: color, color: '#fff', fontSize: 12, fontWeight: 700 }}>
+                                        {status[0].toUpperCase()}
+                                      </div>
+                                    ) : (
+                                      <div title="Sin dato" style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 8, background: '#e9ecef' }} />
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
+
+              {/* SECCIÓN GRÁFICAS */}
+              {activeSection === 'graficas' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {/* Selectores de años y IC */}
+                  <div style={{ background: '#fff', padding: 16, borderRadius: 8, marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                    {(() => {
+                      const yearsArr = (Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort((a, b) => b - a));
+                      const selectedCount = yearsArr.filter(y => enabledYears[y] ?? false).length;
+                      return (
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {yearsArr.map(y => {
+                              const checked = enabledYears[y] ?? false;
+                              const disabled = !checked && selectedCount >= 3;
+                              return (
+                                <label key={y} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: disabled ? 'not-allowed' : 'pointer', padding: '6px 10px', borderRadius: 6, background: checked ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f8f9fa', border: '1px solid #e9ecef', opacity: disabled ? 0.5 : 1, color: checked ? '#fff' : '#495057' }}>
+                                  <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggleYear(y)} />
+                                  <span style={{ fontWeight: checked ? 700 : 500 }}>{y}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {yearsArr.filter(y => enabledYears[y] ?? false).map(y => {
+                              const ic = computeICForEnteYear(selectedEnte, y);
+                              return (
+                                <div key={y} style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff', padding: '6px 12px', borderRadius: 8, fontWeight: 700, fontSize: 13 }}>
+                                  IC {y} = {ic !== null ? `${ic}%` : '-'}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Gráfico de barras */}
+                  <div style={{ width: '100%', height: 320, background: '#fff', border: '1px solid #e9ecef', borderRadius: 12 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={buildBarDataForEnte(selectedEnte)}
+                        margin={{ top: 10, right: 30, left: -30, bottom: 40 }}
+                        barCategoryGap="20%"
+                        barGap={1}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" tick={<CustomXAxisTick />}>
+                          <Label content={<CustomYearsLabel enabledYears={enabledYears} />} position="bottom" />
+                        </XAxis>
+                        <YAxis
+                          domain={[0, 2]}
+                          allowDecimals={false}
+                          axisLine={false}
+                          tick={false}
+                        />
+                        <Tooltip content={<CustomBarTooltip />} />
+                        {(Array.from(new Set((selectedEnte.compliances || []).map(c => c.year))).sort()).map((y) => {
+                          const enabled = enabledYears[y] ?? false;
+                          if (!enabled) return null;
+                          const keyBase = String(y);
+                          const colors = { cumplio: '#28a745', parcial: '#ffc107', no: '#dc3545' };
+                          return (
+                            <React.Fragment key={keyBase}>
+                              <Bar
+                                dataKey={`${keyBase}_no`}
+                                stackId={keyBase}
+                                fill={colors.no}
+                                stroke="#991b1b"
+                                strokeWidth={1.8}
+                                fillOpacity={0.98}
+                                radius={[6, 6, 0, 0]}
+                              />
+                              <Bar
+                                dataKey={`${keyBase}_parcial`}
+                                stackId={keyBase}
+                                fill={colors.parcial}
+                                stroke="#B59B05"
+                                strokeWidth={1.8}
+                                fillOpacity={0.98}
+                                radius={[6, 6, 0, 0]}
+                              />
+                              <Bar
+                                dataKey={`${keyBase}_cumplio`}
+                                stackId={keyBase}
+                                fill={colors.cumplio}
+                                stroke="#277A3A"
+                                strokeWidth={1.8}
+                                fillOpacity={0.98}
+                                radius={[6, 6, 0, 0]}
+                              />
+                            </React.Fragment>
+                          );
+                        })}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Tabla de cumplimientos por año */}
+                  <div style={{ width: '100%', maxHeight: 340, overflowY: 'auto', marginTop: 6 }}>
+                    <h6 style={{ marginTop: 6, position: 'sticky', background: '#fff', zIndex: 6, padding: '16px 0' }}>Cumplimientos por año</h6>
+                    {(() => {
+                      const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]).map(y => parseInt(y, 10)).sort((a, b) => b - a);
+                      if (yearsSelected.length === 0) return <div className="text-muted">No hay años seleccionados.</div>;
+                      const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                      const groups = yearsSelected.map(y => {
+                        const items = (selectedEnte.compliances || []).filter(c => c.year === y);
+                        const ordered = months.map(mn => items.find(it => it.month === mn)).filter(Boolean);
+                        return { year: y, items: ordered };
+                      });
+
+                      const getBadgeVariant = (status) => {
+                        const s = (status || '').toString().toLowerCase();
+                        if (!s) return 'bg-secondary';
+                        if (s === 'cumplio') return 'bg-success';
+                        if (s === 'parcial' || s === 'partial') return 'bg-warning text-dark';
+                        if (s === 'no' || s === 'nocumple' || s === 'n') return 'bg-danger';
+                        return 'bg-secondary';
+                      };
+
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, yearsSelected.length)}, 1fr)`, gap: 12 }}>
+                          {groups.map(g => (
+                            <div key={g.year} className="p-2 rounded" style={{marginTop: 6, background: '#fff', border: '1px solid #e9ecef' }}>
+                              <div style={{background: '#fff', borderBottom: '1px solid #eef', marginTop: 12, position: 'sticky', top: 0, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <strong>{g.year}</strong>
+                                <small className="text-muted">{g.items.length} meses</small>
+                              </div>
+                              {g.items.length === 0 ? (
+                                <div className="text-muted">No hay registros para este año.</div>
+                              ) : (
+                                <ul className="list-group list-group-flush">
+                                  {g.items.map((c, idx) => (
+                                    <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
+                                      <div><strong>{c.month}</strong></div>
+                                      <span className={`badge ${getBadgeVariant(c.status)}`}>{tipoLabels[c.status]}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* FOOTER CON BOTONES DE EXPORTACIÓN Y CERRAR */}
+            <div style={{ padding: windowWidth < 480 ? 12 : 16, background: '#f8f9fa', borderTop: '1px solid #e9ecef', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 8, flexWrap: windowWidth < 480 ? 'wrap' : 'nowrap' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {selectedEnte && (
+                  <>
+                    <a
+                      href={(() => {
+                        const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]).map(y => parseInt(y, 10)).sort((a, b) => b - a);
+                        const yearsParam = yearsSelected.join('-');
+                        return yearsSelected.length > 0 ? `/SiretExportPDFEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#';
+                      })()}
+                      style={{
+                        background:'linear-gradient(135deg, #dc3545 0%, #b02a37 100%)',
+                        color:'#fff',
+                        border:'none',
+                        padding: windowWidth < 480 ? '6px 10px' : '8px 16px',
+                        fontWeight:600,
+                        borderRadius:8,
+                        fontSize: windowWidth < 480 ? 11 : 13,
+                        cursor:'pointer',
+                        boxShadow:'0 2px 6px rgba(220,53,69,0.35)',
+                        transition:'all 0.2s ease',
+                        display:'flex',
+                        alignItems:'center',
+                        gap: windowWidth < 480 ? 4 : 6,
+                        textDecoration:'none',
+                        opacity: (() => {
+                          const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]);
+                          return yearsSelected.length > 0 ? 1 : 0.6;
+                        })()
+                      }}
+                      title="Exportar PDF"
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(220,53,69,0.35)'; }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 480 ? 12 : 14} height={windowWidth < 480 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                      </svg>
+                      {windowWidth < 480 ? '' : 'Exportar PDF'}
+                    </a>
+                    <a
+                      href={(() => {
+                        const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]).map(y => parseInt(y, 10)).sort((a, b) => b - a);
+                        const yearsParam = yearsSelected.join('-');
+                        return yearsSelected.length > 0 ? `/SiretExportExcelEnte?years=${encodeURIComponent(yearsParam)}&enteIds=${encodeURIComponent(String(selectedEnte.id))}` : '#';
+                      })()}
+                      style={{
+                        background:'linear-gradient(135deg, #14532d 0%, #0f3d21 100%)',
+                        color:'#fff',
+                        border:'none',
+                        padding: windowWidth < 480 ? '6px 10px' : '8px 16px',
+                        fontWeight:600,
+                        borderRadius:8,
+                        fontSize: windowWidth < 480 ? 11 : 13,
+                        cursor:'pointer',
+                        boxShadow:'0 2px 6px rgba(20,83,45,0.35)',
+                        transition:'all 0.2s ease',
+                        display:'flex',
+                        alignItems:'center',
+                        gap: windowWidth < 480 ? 4 : 6,
+                        textDecoration:'none',
+                        opacity: (() => {
+                          const yearsSelected = Object.keys(enabledYears).filter(y => enabledYears[y]);
+                          return yearsSelected.length > 0 ? 1 : 0.6;
+                        })()
+                      }}
+                      title="Exportar Excel"
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(20,83,45,0.35)'; }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width={windowWidth < 480 ? 12 : 14} height={windowWidth < 480 ? 12 : 14} fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                      </svg>
+                      {windowWidth < 480 ? '' : 'Exportar Excel'}
+                    </a>
+                  </>
+                )}
+              </div>
               <button
                 className="btn"
                 onClick={closeEnteModal}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from "../assets/asebcs.jpg";
 import Toast from "../Components/Toast";
+import axiosClient from "../axios-client";
 
 export default function SiretEntes() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -83,12 +84,9 @@ export default function SiretEntes() {
   // Load classifications from API
   const fetchClasificaciones = async () => {
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificaciones.php`;
-      const res = await fetch(apiUrl);
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json)) setClassifications(json);
-      }
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificaciones`;
+      const res = await axiosClient.get(apiUrl);
+      if (Array.isArray(res.data)) setClassifications(res.data);
     } catch (err) { console.error(err); }
   };
 
@@ -96,11 +94,9 @@ export default function SiretEntes() {
   const fetchEntes = async () => {
     setLoading(true);
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes.php`;
-      const res = await fetch(apiUrl);
-      if (!res.ok) throw new Error("no-api");
-      const json = await res.json();
-      if (Array.isArray(json)) setEntes(json);
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes`;
+      const res = await axiosClient.get(apiUrl);
+      if (Array.isArray(res.data)) setEntes(res.data);
       else setEntes([]);
     } catch {
       setEntes([]);
@@ -131,26 +127,24 @@ export default function SiretEntes() {
     }
 
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/ente_update.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes/${editEnte.id}`;
       const form = new FormData();
-      form.append('id', editEnte.id);
       form.append('title', title);
       form.append('classification', classification);
       form.append('description', description);
       form.append('link', link);
       if (editIconFile) form.append('icon', editIconFile);
 
-      const res = await fetch(apiUrl, { method: "POST", body: form });
-      const json = await res.json();
+      const res = await axiosClient.put(apiUrl, form);
 
-      if (json.success) {
+      if (res.data.success) {
         await fetchEntes();
         setEditEnte(null);
         setEditIconFile(null);
         setEditIconPreview(null);
-        setToast({ message: json.message || 'Ente actualizado exitosamente', type: 'success' });
+        setToast({ message: res.data.message || 'Ente actualizado exitosamente', type: 'success' });
       } else {
-        setToast({ message: json.message || 'Error al actualizar el ente', type: 'error' });
+        setToast({ message: res.data.message || 'Error al actualizar el ente', type: 'error' });
       }
     } catch (err) {
       console.error(err);
@@ -176,7 +170,7 @@ export default function SiretEntes() {
     }
 
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/ente_create.php`;
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes`;
       const form = new FormData();
       form.append('title', title);
       if (classification) form.append('classification', classification);
@@ -184,19 +178,18 @@ export default function SiretEntes() {
       form.append('link', link);
       if (newIconFile) form.append('icon', newIconFile);
 
-      const res = await fetch(apiUrl, { method: 'POST', body: form });
-      const json = await res.json();
+      const res = await axiosClient.post(apiUrl, form);
 
-      if (res.ok && (json.success || json.id)) {
+      if (res.data.success || res.data.id) {
         await fetchEntes();
         setAddModalOpen(false);
         setNewIconFile(null);
         setNewIconPreview(null);
         setNewClassification('');
         if (newTitleRef.current) newTitleRef.current.value = '';
-        setToast({ message: json.message || 'Ente creado exitosamente', type: 'success' });
+        setToast({ message: res.data.message || 'Ente creado exitosamente', type: 'success' });
       } else {
-        setToast({ message: json.message || 'Error al crear el ente', type: 'error' });
+        setToast({ message: res.data.message || 'Error al crear el ente', type: 'error' });
       }
     } catch (err) {
       console.error(err);
@@ -206,15 +199,14 @@ export default function SiretEntes() {
   const softDelete = async () => {
     if (!toDelete) return;
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/ente_delete.php`;
-      const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: toDelete.id }) });
-      const json = await res.json();
+      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes/${toDelete.id}`;
+      const res = await axiosClient.delete(apiUrl);
 
-      if (json.success) {
+      if (res.data.success) {
         await fetchEntes();
-        setToast({ message: json.message || 'Ente eliminado exitosamente', type: 'success' });
+        setToast({ message: res.data.message || 'Ente eliminado exitosamente', type: 'success' });
       } else {
-        setToast({ message: json.message || 'Error al eliminar el ente', type: 'error' });
+        setToast({ message: res.data.message || 'Error al eliminar el ente', type: 'error' });
       }
       setToDelete(null);
     } catch (err) {
@@ -259,6 +251,11 @@ export default function SiretEntes() {
   return (
     <div className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
       <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -378,7 +375,14 @@ export default function SiretEntes() {
           </div>
         </div>
 
-        {loading ? <p>Cargando...</p> : (
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '280px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '50px', height: '50px', border: '4px solid #f0f0f0', borderTop: '4px solid #681b32', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+              <p style={{ margin: 0, color: '#6c757d' }}>Cargando entes...</p>
+            </div>
+          </div>
+        ) : (
           windowWidth < 768 ? (
             // Vista para Mobile: Cards verticales
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -615,7 +619,7 @@ export default function SiretEntes() {
               </h4>
             </div>
             <div style={{ padding: '24px' }}>
-              <p style={{ margin: 0, fontSize: 15, color: '#2c3e50' }}>¿Estás seguro de que deseas eliminar el ente <strong style={{ color: '#681b32' }}>{toDelete.title}</strong>? Se eliminarán <strong style={{ color: '#000000' }}>TODOS</strong> los cumplimientos del ente</p>
+              <p style={{ margin: 0, fontSize: 15, color: '#2c3e50' }}>¿Estás seguro de que deseas eliminar el ente <strong style={{ color: '#681b32' }}>{toDelete.title}</strong>? Se eliminarán <strong style={{ color: '#000000' }}>TODOS</strong> los cumplimientos del ente.</p>
             </div>
             <div style={{ borderTop: '1px solid #e9ecef', padding: '18px 24px', background:'#f8f9fa', display:'flex', justifyContent:'flex-end', gap:10 }}>
               <button className="btn" onClick={closeDeleteModal} style={{ background: '#fff', color: '#6c757d', border: '2px solid #dee2e6', padding: '10px 24px', fontWeight: 600, borderRadius: 8, transition: 'all 0.2s ease' }} onMouseEnter={(e) => { e.currentTarget.style.background = '#f8f9fa'; e.currentTarget.style.borderColor = '#adb5bd'; }} onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#dee2e6'; }}>Cancelar</button>

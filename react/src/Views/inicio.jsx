@@ -45,9 +45,8 @@ export default function Inicio() {
   React.useEffect(() => {
     const fetchEntes = async () => {
       try {
-        const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-        const response = await fetch(`${apiBase}/entes.php`);
-        const data = await response.json();
+        const response = await axiosClient.get(`/entes`);
+        const data = response.data;
         setEntes(Array.isArray(data) ? data : []);
         setLoading(false);
       } catch (error) {

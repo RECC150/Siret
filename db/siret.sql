@@ -4,43 +4,50 @@ USE siret;
 
 -- Tabla de clasificaciones
 CREATE TABLE IF NOT EXISTS classifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(150) NOT NULL
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(250) NOT NULL UNIQUE,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Tabla de entes
 CREATE TABLE IF NOT EXISTS entes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(250) NOT NULL,
-  classification INT NULL,
+  classification_id BIGINT UNSIGNED NULL,
   img VARCHAR(500) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (classification) REFERENCES classifications(id) ON DELETE SET NULL
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  FOREIGN KEY (classification_id) REFERENCES classifications(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Tabla de cumplimientos (por mes/año)
 CREATE TABLE IF NOT EXISTS compliances (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  ente_id INT NOT NULL,
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ente_id BIGINT UNSIGNED NOT NULL,
   year SMALLINT NOT NULL,
   month VARCHAR(20) NOT NULL,
   status VARCHAR(30) NOT NULL,
   note TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  INDEX idx_compliances_ente_id (ente_id),
+  INDEX idx_compliances_year (year),
+  INDEX idx_compliances_year_month (year, month),
   FOREIGN KEY (ente_id) REFERENCES entes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Tabla de entes activos (relación ente/año)
 CREATE TABLE IF NOT EXISTS entes_activos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  ente INT NOT NULL,
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ente_id BIGINT UNSIGNED NOT NULL,
   year SMALLINT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_ente_year (ente, year),
+  created_at TIMESTAMP NULL,
+  updated_at TIMESTAMP NULL,
+  UNIQUE KEY uniq_ente_year (ente_id, year),
   INDEX idx_entes_activos_year (year),
-  INDEX idx_entes_activos_ente (ente),
-  FOREIGN KEY (ente) REFERENCES entes(id) ON DELETE CASCADE
+  INDEX idx_entes_activos_ente_id (ente_id),
+  FOREIGN KEY (ente_id) REFERENCES entes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Poblado de clasificaciones
@@ -53,7 +60,7 @@ INSERT INTO classifications (name) VALUES
 ('Fideicomisos');
 
 -- Poblado de entes
-INSERT INTO entes (title, classification, img) VALUES
+INSERT INTO entes (title, classification_id, img) VALUES
 ('Congreso del Estado de Baja California Sur', 1, 'http://localhost/siret/storage/app/public/congreso del estado de baja california sur.png'),
 ('Secretaría de Finanzas y Administración del Estado de Baja California Sur', 1, 'http://localhost/siret/storage/app/public/secretaria de finanzas y administracion del estado de baja california sur.png'),
 ('Consejo de la Judicatura en el Estado de Baja California Sur', 1, 'http://localhost/siret/storage/app/public/consejo de la judicatura en el estado de baja california sur.png'),
@@ -138,7 +145,7 @@ INSERT INTO entes (title, classification, img) VALUES
 ('Fideicomiso de Obras de Infraestructura Social de Los Cabos', 6, 'http://localhost/siret/storage/app/public/Fideicomiso.png');
 
 -- Poblado de cumplimientos (ejemplos)
-INSERT INTO compliances (ente, year, month, status) VALUES
+INSERT INTO compliances (ente_id, year, month, status) VALUES
 (1,2025,'Enero','cumplio'),
 (1,2025,'Febrero','cumplio'),
 (1,2025,'Marzo','cumplio'),
@@ -2673,6 +2680,6 @@ INSERT INTO compliances (ente, year, month, status) VALUES
 (68,2023,'Diciembre','cumplio');
 
 -- Poblar entes_activos a partir de cumplimientos existentes
-INSERT IGNORE INTO entes_activos (ente, year)
-SELECT DISTINCT ente, year FROM compliances;
+INSERT IGNORE INTO entes_activos (ente_id, year)
+SELECT DISTINCT ente_id, year FROM compliances;
 

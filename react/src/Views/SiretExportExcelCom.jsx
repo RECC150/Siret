@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx-js-style';
+import axiosClient from '../axios-client';
 
 // Componente de exportación a Excel con vista previa HTML
 export default function SiretExportExcel(){
@@ -18,8 +19,6 @@ export default function SiretExportExcel(){
     // UI
     const [sidebarVisible, setSidebarVisible] = useState(true);
 
-	const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
 	useEffect(() => {
 		if (years.length === 0) return;
 		setError(null);
@@ -27,11 +26,11 @@ export default function SiretExportExcel(){
 		const load = async () => {
 			try {
 				const [compRes, entesRes] = await Promise.all([
-					fetch(`${apiBase}/compliances.php`),
-					fetch(`${apiBase}/entes.php`)
+				axiosClient.get(`/compliances`),
+				axiosClient.get(`/entes`)
 				]);
-				const compData = await compRes.json();
-				const entesData = await entesRes.json();
+				const compData = compRes.data;
+				const entesData = entesRes.data;
 
 				// Filtrar cumplimientos por años seleccionados
 				let filtered = Array.isArray(compData)
@@ -51,7 +50,7 @@ export default function SiretExportExcel(){
             }
         };
         load();
-    }, [years, month, apiBase]);
+    }, [years, month]);
 
 	const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 	const monthsShort = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];

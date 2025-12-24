@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import asebcsLogo from '../assets/asebcs.jpg';
+import axiosClient from '../axios-client';
 
 export default function SiretExportPDF(){
   const params = new URLSearchParams(window.location.search);
@@ -17,31 +18,26 @@ export default function SiretExportPDF(){
   const [progress, setProgress] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
   useEffect(() => {
     if (!year) return;
     const load = async () => {
       setLoading(true); setError(null);
       try {
         const [compRes, entesRes, activosRes] = await Promise.all([
-          fetch(`${apiBase}/compliances.php`),
-          fetch(`${apiBase}/entes.php`),
-          fetch(`${apiBase}/entes_activos.php?year=${year}`)
+          axiosClient.get(`/compliances`),
+          axiosClient.get(`/entes`),
+          axiosClient.get(`/entes-activos?year=${year}`)
         ]);
-        const compData = await compRes.json();
-        const entesData = await entesRes.json();
-        const activosData = await activosRes.json();
-        setCompliances(Array.isArray(compData) ? compData.filter(c => String(c.year) === String(year)) : []);
-        setEntes(Array.isArray(entesData) ? entesData : []);
-        setEntesActivos(Array.isArray(activosData) ? activosData : []);
+        setCompliances(Array.isArray(compRes.data) ? compRes.data.filter(c => String(c.year) === String(year)) : []);
+        setEntes(Array.isArray(entesRes.data) ? entesRes.data : []);
+        setEntesActivos(Array.isArray(activosRes.data) ? activosRes.data : []);
       } catch (e) {
         setError('No se pudieron cargar los datos.');
         console.error(e);
       } finally { setLoading(false); }
     };
     load();
-  }, [year, apiBase]);
+  }, [year]);
 
   const monthsOrder = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const monthsShort = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];

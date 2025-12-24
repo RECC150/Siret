@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import asebcsLogo from '../assets/asebcs.jpg';
+import axiosClient from '../axios-client';
 
 export default function SiretExportPDFMes(){
   const params = new URLSearchParams(window.location.search);
@@ -22,8 +23,6 @@ export default function SiretExportPDFMes(){
   const [generating, setGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [progress, setProgress] = useState(0); // progreso de generación estilo anual
-
-  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
   const sidebarWidth = 260;
   const containerStyle = {
@@ -103,11 +102,11 @@ export default function SiretExportPDFMes(){
       setLoading(true);
       try {
         const [cRes, eRes, aRes] = await Promise.all([
-          fetch(apiBase + '/compliances.php'),
-          fetch(apiBase + '/entes.php'),
-          fetch(apiBase + `/entes_activos.php?year=${encodeURIComponent(year)}`)
+          axiosClient.get('/compliances'),
+          axiosClient.get('/entes'),
+          axiosClient.get(`/entes-activos?year=${encodeURIComponent(year)}`)
         ]);
-        const [cJson, eJson, aJson] = await Promise.all([cRes.json(), eRes.json(), aRes.json()]);
+        const [cJson, eJson, aJson] = [cRes.data, eRes.data, aRes.data];
         if (!mounted) return;
         setCompliances(Array.isArray(cJson) ? cJson : []);
         setEntes(Array.isArray(eJson) ? eJson : []);
@@ -120,7 +119,7 @@ export default function SiretExportPDFMes(){
     };
     load();
     return () => { mounted = false; };
-  }, [apiBase, year]);
+  }, [year]);
 
   // Map of status by ente for given month
   const statusByEnte = useMemo(() => {

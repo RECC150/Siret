@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import ASEBCS from "../assets/asebcs.jpg";
 import Toast from "../Components/Toast";
+import axiosClient from "../axios-client";
 
 export default function SiretClasificaciones() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -53,11 +54,8 @@ export default function SiretClasificaciones() {
   const fetchClasificaciones = async () => {
     setLoading(true);
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificaciones.php`;
-      const res = await fetch(apiUrl);
-      if (!res.ok) throw new Error('no-api');
-      const json = await res.json();
-      if (Array.isArray(json)) setClasificaciones(json);
+      const res = await axiosClient.get('/clasificaciones');
+      if (Array.isArray(res.data)) setClasificaciones(res.data);
       else setClasificaciones([]);
     } catch (err) {
       setClasificaciones([]);
@@ -84,17 +82,15 @@ export default function SiretClasificaciones() {
       return;
     }
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificacion_create.php`;
-      const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
-      const json = await res.json();
+      const res = await axiosClient.post('/clasificaciones', { title });
 
-      if (json.success) {
+      if (res.data.success) {
         await fetchClasificaciones();
         setAddModalOpen(false);
         if (newRef.current) newRef.current.value = '';
-        setToast({ message: json.message || 'Clasificación creada exitosamente', type: 'success' });
+        setToast({ message: res.data.message || 'Clasificación creada exitosamente', type: 'success' });
       } else {
-        setToast({ message: json.message || 'Error al crear la clasificación', type: 'error' });
+        setToast({ message: res.data.message || 'Error al crear la clasificación', type: 'error' });
       }
     } catch (err) {
       console.error(err);
@@ -110,16 +106,14 @@ export default function SiretClasificaciones() {
       return;
     }
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificacion_update.php`;
-      const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editItem.id, title }) });
-      const json = await res.json();
+      const res = await axiosClient.put(`/clasificaciones/${editItem.id}`, { title });
 
-      if (json.success) {
+      if (res.data.success) {
         await fetchClasificaciones();
         setEditItem(null);
-        setToast({ message: json.message || 'Clasificación actualizada exitosamente', type: 'success' });
+        setToast({ message: res.data.message || 'Clasificación actualizada exitosamente', type: 'success' });
       } else {
-        setToast({ message: json.message || 'Error al actualizar la clasificación', type: 'error' });
+        setToast({ message: res.data.message || 'Error al actualizar la clasificación', type: 'error' });
       }
     } catch (err) {
       console.error(err);
@@ -130,15 +124,13 @@ export default function SiretClasificaciones() {
   const softDelete = async () => {
     if (!toDelete) return;
     try {
-      const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/clasificacion_delete.php`;
-      const res = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: toDelete.id }) });
-      const json = await res.json();
+      const res = await axiosClient.delete(`/clasificaciones/${toDelete.id}`);
 
-      if (json.success) {
+      if (res.data.success) {
         await fetchClasificaciones();
-        setToast({ message: json.message || 'Clasificación eliminada exitosamente', type: 'success' });
+        setToast({ message: res.data.message || 'Clasificación eliminada exitosamente', type: 'success' });
       } else {
-        setToast({ message: json.message || 'Error al eliminar la clasificación', type: 'error' });
+        setToast({ message: res.data.message || 'Error al eliminar la clasificación', type: 'error' });
       }
       setToDelete(null);
     } catch (err) {
@@ -151,6 +143,11 @@ export default function SiretClasificaciones() {
   return (
     <div className="container-fluid px-0" style={{ paddingTop: '50px', background: '#f8f9fa', minHeight: '100vh' }}>
       <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -208,7 +205,14 @@ export default function SiretClasificaciones() {
           </div>
         </div>
 
-        {loading ? <p>Cargando...</p> : (
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '280px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '50px', height: '50px', border: '4px solid #f0f0f0', borderTop: '4px solid #681b32', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+              <p style={{ margin: 0, color: '#6c757d' }}>Cargando clasificaciones...</p>
+            </div>
+          </div>
+        ) : (
           <table className="table table-sm" style={{ borderCollapse: 'collapse', background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)', color: '#fff' }}>

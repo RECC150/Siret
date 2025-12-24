@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from '../assets/asebcs.jpg';
 import Toast from '../Components/Toast';
 import * as XLSX from 'xlsx';
+import axiosClient from '../axios-client';
 
 export default function SiretCumplimientos(){
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -14,36 +15,59 @@ export default function SiretCumplimientos(){
   const [filterEnte, setFilterEnte] = useState('');
   const [filterClasificacion, setFilterClasificacion] = useState('');
   const [filterYear, setFilterYear] = useLocalStorage('siretCumplimientos_filterYear', '');
+  const [availableYears, setAvailableYears] = useState([]);
 
   useEffect(()=>{
     const load = async () => {
       setLoading(true);
       try {
-        const base = apiBase;
-        const [cRes, eRes, clRes] = await Promise.all([
-          fetch(base + '/compliances.php'),
-          fetch(base + '/entes.php'),
-          fetch(base + '/clasificaciones.php')
+        // OPTIMIZACIÓN CRÍTICA: Solo cargar año actual
+        const currentYear = new Date().getFullYear();
+        const yearToLoad = filterYear || String(currentYear);
+
+        // Cargar en paralelo: entes, clasificaciones, años disponibles, y compliances del año
+        const [eRes, clRes, yearsRes, cRes] = await Promise.all([
+          axiosClient.get('/entes'),
+          axiosClient.get('/clasificaciones'),
+          axiosClient.get('/compliances?fields=year'),
+          axiosClient.get(`/compliances?year=${yearToLoad}`)
         ]);
-        const [cJson, eJson, clJson] = await Promise.all([cRes.json(), eRes.json(), clRes.json()]);
-        setCompliances(Array.isArray(cJson) ? cJson : []);
-        setEntes(Array.isArray(eJson) ? eJson : []);
-        setClasificaciones(Array.isArray(clJson) ? clJson : []);
+
+        setEntes(Array.isArray(eRes.data) ? eRes.data : []);
+        setClasificaciones(Array.isArray(clRes.data) ? clRes.data : []);
+
+        const years = Array.isArray(yearsRes.data) ? yearsRes.data.map(r=>String(r.year)).filter(Boolean) : [];
+        const uniqueYears = Array.from(new Set(years)).sort((a,b)=>Number(b)-Number(a));
+        setAvailableYears(uniqueYears);
+
+        setCompliances(Array.isArray(cRes.data) ? cRes.data : []);
+
+        if (!filterYear) setFilterYear(yearToLoad);
       } catch(err){
         console.error(err);
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
 
-  // Establecer año por defecto solo si no hay uno guardado
+  // Recargar compliances cuando cambia el año
   useEffect(() => {
-    if (!filterYear && compliances.length > 0) {
-      const years = compliances.map(r=>Number(r.year)).filter(Boolean);
-      const maxYear = years.length ? Math.max(...years) : new Date().getFullYear();
-      setFilterYear(String(maxYear));
-    }
-  }, [compliances, filterYear, setFilterYear]);
+    if (!filterYear || !availableYears.length) return;
+    const loadYear = async () => {
+      setLoading(true);
+      try {
+        const cRes = await axiosClient.get(`/compliances?year=${filterYear}`);
+        setCompliances(Array.isArray(cRes.data) ? cRes.data : []);
+      } catch(err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadYear();
+  }, [filterYear]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -53,11 +77,7 @@ export default function SiretCumplimientos(){
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const years = useMemo(()=>{
-    const s = new Set();
-    compliances.forEach(r => { if (r.year) s.add(String(r.year)); });
-    return Array.from(s).sort((a,b)=>Number(b)-Number(a));
-  }, [compliances]);
+  const years = availableYears;
 
   // Sincronizar displayYears con years
   useEffect(() => {
@@ -170,7 +190,7 @@ export default function SiretCumplimientos(){
     setDeletingYear(year);
     try {
       // Intento de llamada DELETE (backend debe implementar esta acción)
-      await fetch(`${apiBase}/compliances.php?year=${encodeURIComponent(year)}`, { method: 'DELETE' }).catch(()=>{});
+      await axiosClient.delete(`${apiBase}/compliances?year=${encodeURIComponent(year)}`).catch(()=>{});
       // Remover del estado local
       setCompliances(prev => prev.filter(c => String(c.year) !== String(year)));
       setDisplayYears(prev => prev.filter(y => y !== year));
@@ -191,7 +211,7 @@ export default function SiretCumplimientos(){
     setDeletingMonth(true);
     try {
       // Eliminar cumplimientos de ese mes
-      await fetch(`${apiBase}/compliances.php?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}`, { method: 'DELETE' }).catch(()=>{});
+      await axiosClient.delete(`${apiBase}/compliances?year=${encodeURIComponent(monthModalYear)}&month=${encodeURIComponent(monthModalMonth)}`).catch(()=>{});
       // Remover del estado local
       setCompliances(prev => prev.filter(c => !(String(c.year) === String(monthModalYear) && c.month === monthModalMonth)));
       // Remover de meses agregados manualmente si existe
@@ -219,9 +239,8 @@ export default function SiretCumplimientos(){
     if (!showEntesModal || !entesModalYear) return;
     const load = async () => {
       try {
-        const res = await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(entesModalYear)}`);
-        const json = await res.json();
-        const setIds = new Set((json || []).map(r => Number(r.ente_id)));
+        const res = await axiosClient.get(`/entes-activos?year=${encodeURIComponent(entesModalYear)}`);
+        const setIds = new Set((res.data || []).map(r => Number(r.ente_id)));
         setEntesActivosByYear(prev => ({ ...prev, [String(entesModalYear)]: setIds }));
       } catch (e) { console.error(e); }
     };
@@ -234,9 +253,8 @@ export default function SiretCumplimientos(){
     if (!showMonthModal || !monthModalYear) return;
     const load = async () => {
       try {
-        const res = await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(monthModalYear)}`);
-        const json = await res.json();
-        const setIds = new Set((json || []).map(r => Number(r.ente_id)));
+        const res = await axiosClient.get(`/entes-activos?year=${encodeURIComponent(monthModalYear)}`);
+        const setIds = new Set((res.data || []).map(r => Number(r.ente_id)));
         setEntesActivosByYear(prev => ({ ...prev, [String(monthModalYear)]: setIds }));
       } catch (e) { console.error(e); }
     };
@@ -261,10 +279,7 @@ export default function SiretCumplimientos(){
     setLoadingEnteId(enteId);
     try {
       if (active) {
-        await fetch(`${apiBase}/entes_activos.php`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ year: y, ente_id: enteId })
-        });
+        await axiosClient.post(`${apiBase}/entes-activos`, { year: y, ente_id: enteId });
         setEntesActivosByYear(prev => {
           const clone = { ...prev };
           const setIds = new Set(clone[y] || []);
@@ -273,7 +288,7 @@ export default function SiretCumplimientos(){
           return clone;
         });
       } else {
-        await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(y)}&ente_id=${encodeURIComponent(enteId)}`, { method: 'DELETE' });
+        await axiosClient.delete(`${apiBase}/entes-activos?year=${encodeURIComponent(y)}&ente_id=${encodeURIComponent(enteId)}`);
         setEntesActivosByYear(prev => {
           const clone = { ...prev };
           const setIds = new Set(clone[y] || []);
@@ -542,9 +557,8 @@ export default function SiretCumplimientos(){
       if (entesActivosByYear[key]) return; // ya cargado
       const load = async () => {
         try {
-          const res = await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(year)}`);
-          const json = await res.json();
-          const setIds = new Set((json || []).map(r => Number(r.ente_id)));
+          const res = await axiosClient.get(`/entes-activos?year=${encodeURIComponent(year)}`);
+          const setIds = new Set((res.data || []).map(r => Number(r.ente_id)));
           setEntesActivosByYear(prev => ({ ...prev, [key]: setIds }));
         } catch(e){ console.error(e); }
       };
@@ -559,9 +573,8 @@ export default function SiretCumplimientos(){
     if (entesActivosByYear[key]) return; // ya cargado
     const load = async () => {
       try {
-        const res = await fetch(`${apiBase}/entes_activos.php?year=${encodeURIComponent(filterYear)}`);
-        const json = await res.json();
-        const setIds = new Set((json || []).map(r => Number(r.ente_id)));
+        const res = await axiosClient.get(`/entes-activos?year=${encodeURIComponent(filterYear)}`);
+        const setIds = new Set((res.data || []).map(r => Number(r.ente_id)));
         setEntesActivosByYear(prev => ({ ...prev, [key]: setIds }));
       } catch(e){ console.error(e); }
     };
@@ -624,6 +637,7 @@ export default function SiretCumplimientos(){
     let buffer = '';
 
     for (let line of lines) {
+      const originalLine = line;
       line = line.trim();
 
       // Ignorar comentarios y líneas vacías
@@ -635,7 +649,7 @@ export default function SiretCumplimientos(){
       if (line.toUpperCase().includes('INSERT') && line.toUpperCase().includes('INTO')) {
         if (line.toUpperCase().includes('COMPLIANCES')) {
           currentInsert = 'compliances';
-        } else if (line.toUpperCase().includes('ENTES_ACTIVOS')) {
+        } else if (line.toUpperCase().includes('ENTES_ACTIVOS') || line.toUpperCase().includes('ENTES-ACTIVOS')) {
           currentInsert = 'entes_activos';
         }
       }
@@ -644,32 +658,81 @@ export default function SiretCumplimientos(){
       if (line.endsWith(';') && currentInsert) {
         const valuesMatch = buffer.match(/VALUES\s+([\s\S]+);/i);
         if (valuesMatch) {
-          const valuesStr = valuesMatch[1];
-          // Parsear cada tupla (row)
-          const tuples = valuesStr.match(/\([^)]+\)/g) || [];
+          const valuesStr = valuesMatch[1].trim();
+
+          // Parser mejorado para tuplas
+          // Encontrar todas las tuplas: (valor1, valor2, ...)
+          let tupleStart = -1;
+          let parenDepth = 0;
+          const tuples = [];
+
+          for (let i = 0; i < valuesStr.length; i++) {
+            const char = valuesStr[i];
+
+            if (char === '(' && parenDepth === 0) {
+              tupleStart = i;
+              parenDepth = 1;
+            } else if (char === '(' && parenDepth > 0) {
+              parenDepth++;
+            } else if (char === ')') {
+              parenDepth--;
+              if (parenDepth === 0 && tupleStart >= 0) {
+                tuples.push(valuesStr.substring(tupleStart, i + 1));
+                tupleStart = -1;
+              }
+            }
+          }
 
           tuples.forEach(tuple => {
-            const values = tuple.slice(1, -1).split(',').map(v => {
-              v = v.trim();
+            // Remover paréntesis externos
+            const innerStr = tuple.slice(1, -1);
+
+            // Parsear valores separados por comas, respetando strings entrecomillados
+            const values = [];
+            let currentVal = '';
+            let inQuote = false;
+
+            for (let i = 0; i < innerStr.length; i++) {
+              const char = innerStr[i];
+              const nextChar = innerStr[i + 1];
+
+              if (char === "'" && nextChar === "'") {
+                // Escaped quote
+                currentVal += "''";
+                i++;
+              } else if (char === "'") {
+                inQuote = !inQuote;
+                currentVal += char;
+              } else if (char === ',' && !inQuote) {
+                values.push(currentVal.trim());
+                currentVal = '';
+              } else {
+                currentVal += char;
+              }
+            }
+            if (currentVal) values.push(currentVal.trim());
+
+            // Limpiar valores
+            const cleanValues = values.map(v => {
               if (v === 'NULL') return null;
               if (v.startsWith("'") && v.endsWith("'")) return v.slice(1, -1).replace(/''/g, "'");
               return v;
             });
 
-            if (currentInsert === 'compliances' && values.length >= 4) {
+            if (currentInsert === 'compliances' && cleanValues.length >= 4) {
               compliancesData.push({
-                ente_id: parseInt(values[0]),
-                year: parseInt(values[1]),
-                month: values[2],
-                status: values[3],
-                note: values[4] || null,
-                created_at: values[5] || null
+                ente_id: parseInt(cleanValues[0]),
+                year: parseInt(cleanValues[1]),
+                month: cleanValues[2],
+                status: cleanValues[3],
+                note: cleanValues[4] || null,
+                created_at: cleanValues[5] || null
               });
-            } else if (currentInsert === 'entes_activos' && values.length >= 2) {
+            } else if (currentInsert === 'entes_activos' && cleanValues.length >= 2) {
               entesActivosData.push({
-                ente_id: parseInt(values[0]),
-                year: parseInt(values[1]),
-                created_at: values[2] || null
+                ente_id: parseInt(cleanValues[0]),
+                year: parseInt(cleanValues[1]),
+                created_at: cleanValues[2] || null
               });
             }
           });
@@ -734,11 +797,7 @@ export default function SiretCumplimientos(){
             for (let i = 0; i < newEntesActivos.length; i++) {
               const ea = newEntesActivos[i];
               try {
-                await fetch(`${apiBase}/entes_activos.php`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ ente_id: ea.ente_id, year: ea.year })
-                });
+                await axiosClient.post(`${apiBase}/entes-activos`, { ente_id: ea.ente_id, year: ea.year });
               } catch (err) {
                 console.error('Error importing ente activo:', err);
               }
@@ -753,7 +812,7 @@ export default function SiretCumplimientos(){
           if (newCompliances.length > 0) {
             setImportLog(prev => [...prev, `🔄 Importando ${newCompliances.length} cumplimientos...`]);
 
-            // Preparar datos en formato de updates para compliance_update.php
+            // Preparar datos en formato de updates para el endpoint de cumplimientos
             const updates = newCompliances.map(comp => ({
               ente_id: comp.ente_id,
               year: comp.year,
@@ -762,14 +821,9 @@ export default function SiretCumplimientos(){
             }));
 
             try {
-              const res = await fetch(`${apiBase}/compliance_update.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ updates })
-              });
-              const json = await res.json();
+              const res = await axiosClient.post(`${apiBase}/compliances/update`, { updates });
 
-              if (json && json.success) {
+              if (res.data && res.data.success) {
                 setImportLog(prev => [...prev, `✅ Cumplimientos importados correctamente`]);
               } else {
                 setImportLog(prev => [...prev, `⚠️ Algunos cumplimientos podrían no haberse importado`]);
@@ -786,15 +840,21 @@ export default function SiretCumplimientos(){
 
           // Recargar datos
           setImportLog(prev => [...prev, `🔄 Recargando datos...`]);
-          const [cRes, eRes] = await Promise.all([
-            fetch(apiBase + '/compliances.php'),
-            fetch(apiBase + '/entes.php')
+          const [cRes, eRes, entesActivosRes] = await Promise.all([
+            axiosClient.get('/compliances'),
+            axiosClient.get('/entes'),
+            axiosClient.get(`/entes-activos?year=${encodeURIComponent(importYear)}`)
           ]);
-          const [cJson, eJson] = await Promise.all([cRes.json(), eRes.json()]);
-          setCompliances(Array.isArray(cJson) ? cJson : []);
-          setEntes(Array.isArray(eJson) ? eJson : []);
+          setCompliances(Array.isArray(cRes.data) ? cRes.data : []);
+          setEntes(Array.isArray(eRes.data) ? eRes.data : []);
 
-          const years = (Array.isArray(cJson) ? cJson.map(r => String(r.year)).filter(Boolean) : []);
+          // Recargar entes activos para el año importado
+          if (entesActivosRes.data) {
+            const setIds = new Set((Array.isArray(entesActivosRes.data) ? entesActivosRes.data : []).map(r => Number(r.ente_id)));
+            setEntesActivosByYear(prev => ({ ...prev, [String(importYear)]: setIds }));
+          }
+
+          const years = (Array.isArray(cRes.data) ? cRes.data.map(r => String(r.year)).filter(Boolean) : []);
           const uniqueYears = Array.from(new Set(years)).sort((a, b) => Number(b) - Number(a));
           setDisplayYears(uniqueYears);
 
@@ -1030,6 +1090,7 @@ export default function SiretCumplimientos(){
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <h2 style={{ fontWeight: 700, color: '#681b32', margin: 0 }}>Añadir Cumplimientos</h2>
             <button
+              disabled={loading}
               onClick={() => {
                 const currentYear = new Date().getFullYear();
                 const maxYear = displayYears.length > 0 ? Math.max(...displayYears.map(y => Number(y))) : currentYear - 1;
@@ -1050,22 +1111,23 @@ export default function SiretCumplimientos(){
                 }
               }}
               style={{
-                background: 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
+                background: loading ? '#ccc' : 'linear-gradient(135deg, #681b32 0%, #200b07 100%)',
                 color: '#fff',
                 border: 'none',
                 padding: '12px 24px',
                 borderRadius: 10,
                 fontWeight: 600,
                 fontSize: 15,
-                boxShadow: '0 3px 8px rgba(104, 27, 50, 0.3)',
-                cursor: 'pointer',
+                boxShadow: loading ? 'none' : '0 3px 8px rgba(104, 27, 50, 0.3)',
+                cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8
+                gap: 8,
+                opacity: loading ? 0.6 : 1
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; }}
+              onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 12px rgba(104, 27, 50, 0.4)'; } }}
+              onMouseLeave={(e) => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(104, 27, 50, 0.3)'; } }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
@@ -1074,13 +1136,19 @@ export default function SiretCumplimientos(){
             </button>
           </div>
 
-          {/* Años disponibles como secciones colapsables */}
-          {displayYears.length === 0 && (
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '280px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '50px', height: '50px', border: '4px solid #f0f0f0', borderTop: '4px solid #681b32', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+                <p style={{ margin: 0, color: '#6c757d' }}>Cargando años...</p>
+              </div>
+            </div>
+          ) : displayYears.length === 0 ? (
             <div className="card card-body mb-3" style={{ border: 'none', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
               <p style={{ margin: 0, color: '#6c757d' }}>No hay años disponibles.</p>
             </div>
-          )}
-
+          ) : (
+            <>
           {displayYears.map((year) => {
             const collapseId = `yearCollapse_${year}`;
             const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -1370,6 +1438,8 @@ export default function SiretCumplimientos(){
               </div>
             );
           })}
+            </>
+          )}
         </section>
       )}
 
@@ -1412,7 +1482,14 @@ export default function SiretCumplimientos(){
             </div>
           </div>
 
-          {loading ? <p>Cargando...</p> : (
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '280px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '50px', height: '50px', border: '4px solid #f0f0f0', borderTop: '4px solid #681b32', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+                <p style={{ margin: 0, color: '#6c757d' }}>Cargando cumplimientos...</p>
+              </div>
+            </div>
+          ) : (
             <div>
               <div style={{
                 position: 'sticky',
@@ -2359,23 +2436,17 @@ export default function SiretCumplimientos(){
                       return;
                     }
 
-                    const res = await fetch(`${apiBase}/compliance_update.php`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ updates })
-                    });
-                    const json = await res.json();
+                    const res = await axiosClient.post(`${apiBase}/compliances/update`, { updates });
 
-                    if (json && json.success) {
+                    if (res.data && res.data.success) {
                       setToast({ message: 'Cumplimientos guardados exitosamente', type: 'success' });
                       // Recargar compliances
-                      const cRes = await fetch(`${apiBase}/compliances.php`);
-                      const cJson = await cRes.json();
-                      setCompliances(Array.isArray(cJson) ? cJson : []);
+                      const cRes = await axiosClient.get(`/compliances`);
+                      setCompliances(Array.isArray(cRes.data) ? cRes.data : []);
                       setMonthModalTemp({});
                       setShowMonthModal(false);
                     } else {
-                      setToast({ message: 'Error al guardar: ' + (json.message || 'Error desconocido'), type: 'error' });
+                      setToast({ message: 'Error al guardar: ' + (res.data.message || 'Error desconocido'), type: 'error' });
                     }
                   } catch (e) {
                     console.error(e);
@@ -2651,24 +2722,17 @@ export default function SiretCumplimientos(){
                     return;
                   }
 
-                  const response = await fetch(`${base}/compliance_update.php`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ updates })
-                  });
+                  const response = await axiosClient.post(`${base}/compliances/update`, { updates });
 
-                  const result = await response.json();
-
-                  if (result.success) {
+                  if (response.data.success) {
                     setToast({ message: 'Cambios guardados exitosamente', type: 'success' });
                     // Recargar cumplimientos
-                    const cRes = await fetch(`${base}/compliances.php`);
-                    const cJson = await cRes.json();
-                    setCompliances(Array.isArray(cJson) ? cJson : []);
+                    const cRes = await axiosClient.get(`${base}/compliances`);
+                    setCompliances(Array.isArray(cRes.data) ? cRes.data : []);
                     setTempCompliances({});
                     closeEditingEnteModal();
                   } else {
-                    setToast({ message: 'Error al guardar: ' + (result.message || 'Error desconocido'), type: 'error' });
+                    setToast({ message: 'Error al guardar: ' + (response.data.message || 'Error desconocido'), type: 'error' });
                   }
                 } catch (error) {
                   console.error('Error:', error);

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import ASEBCS from "../assets/asebcs.jpg";
+import axiosClient from '../axios-client';
 import {
   ResponsiveContainer,
   BarChart,
@@ -34,7 +35,7 @@ export default function Comparativa() {
         if (c.year) s.add(Number(c.year));
       });
     });
-    return Array.from(s).sort((a,b)=>a-b);
+    return Array.from(s).sort((a,b)=>b-a);
   }, [entesList]);
   const [leftFilterName, setLeftFilterName] = useLocalStorage('comparativa_leftFilterName', '');
   const [leftFilterClass, setLeftFilterClass] = useLocalStorage('comparativa_leftFilterClass', '');
@@ -78,10 +79,9 @@ export default function Comparativa() {
 
   useEffect(() => {
     let mounted = true;
-    const apiUrl = `${window.location.protocol}//${window.location.hostname}/siret/api/entes.php`;
-    fetch(apiUrl)
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(json => { if (!mounted) return; if (Array.isArray(json)) setEntesList(json); else setEntesList(entesListFallback); })
+    const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes?with_compliances=1`;
+    axiosClient.get(apiUrl)
+      .then(res => { if (!mounted) return; if (Array.isArray(res.data)) setEntesList(res.data); else setEntesList(entesListFallback); })
       .catch(()=> { if (mounted) setEntesList(entesListFallback); });
     return () => { mounted = false; };
   }, []);
@@ -108,8 +108,8 @@ export default function Comparativa() {
     if (!ente) return [];
     // años a considerar: if caller passes a specific list via ente.__yearsToUse (internal helper), use it
     const yearsArr = (ente && Array.isArray(ente.__yearsToUse) && ente.__yearsToUse.length)
-      ? ente.__yearsToUse.slice().sort((a,b)=>a-b)
-      : Array.from(new Set((ente.compliances || []).map(c => c.year))).sort((a, b) => a - b);
+      ? ente.__yearsToUse.slice().sort((a,b)=>b-a)
+      : Array.from(new Set((ente.compliances || []).map(c => c.year))).sort((a, b) => b - a);
     const monthsOrder = months.filter(m=>m!=='Todos');
     return monthsOrder.map(m=>{
       const row = { month: m.slice(0,3).toLowerCase() };
@@ -210,13 +210,13 @@ export default function Comparativa() {
   useEffect(() => {
     if (!selectedLeft) return;
     const yearsAvailable = Array.from(new Set((selectedLeft.compliances||[]).map(c=>c.year))).sort((a,b)=>b-a);
-    setSelectedYearsLeft(yearsAvailable.slice(0,3));
+    setSelectedYearsLeft(yearsAvailable.slice(0,1));
   }, [selectedLeft]);
 
   useEffect(() => {
     if (!selectedRight) return;
     const yearsAvailable = Array.from(new Set((selectedRight.compliances||[]).map(c=>c.year))).sort((a,b)=>b-a);
-    setSelectedYearsRight(yearsAvailable.slice(0,3));
+    setSelectedYearsRight(yearsAvailable.slice(0,1));
   }, [selectedRight]);
 
   const toggleYearLeft = (y) => {
@@ -319,7 +319,9 @@ export default function Comparativa() {
   const tipoColors = { cumplio: '#28a745', parcial: '#ffc107', no: '#dc3545' };
   const abbrToFull = {
     ene: 'Enero', feb: 'Febrero', mar: 'Marzo', abr: 'Abril', may: 'Mayo', jun: 'Junio',
-    jul: 'Julio', ago: 'Agosto', sep: 'Septiembre', oct: 'Octubre', nov: 'Noviembre', dic: 'Diciembre'
+    jul: 'Julio', ago: 'Agosto', sep: 'Septiembre', oct: 'Octubre', nov: 'Noviembre', dic: 'Diciembre',
+    'Enero': 'Enero', 'Febrero': 'Febrero', 'Marzo': 'Marzo', 'Abril': 'Abril', 'Mayo': 'Mayo', 'Junio': 'Junio',
+    'Julio': 'Julio', 'Agosto': 'Agosto', 'Septiembre': 'Septiembre', 'Octubre': 'Octubre', 'Noviembre': 'Noviembre', 'Diciembre': 'Diciembre'
   };
 
   const CustomBarTooltip = ({ active, payload, label }) => {
@@ -421,9 +423,9 @@ export default function Comparativa() {
   };
 
   // Build aggregated data: for each month, for each selected year count cumplio/parcial/no
-  const buildMonthYearBarData = (yearsToInclude, monthFilter = 'Todos') => {
+  const buildMonthYearBarData = (yearsToInclude, selectedMonths = []) => {
     const monthsOrder = months.filter(m => m !== 'Todos');
-    const filteredMonths = monthFilter === 'Todos' ? monthsOrder : [monthFilter];
+    const filteredMonths = selectedMonths.length > 0 ? selectedMonths : monthsOrder;
     return filteredMonths.map(m => {
       const row = { month: monthAbbr[m] || m.slice(0,3).toLowerCase() };
       yearsToInclude.forEach(y => {
@@ -848,8 +850,8 @@ export default function Comparativa() {
                           const buildDataForComparison = (ente, yearsToUse) => {
                             if (!ente) return [];
                             const yearsArr = Array.isArray(yearsToUse) && yearsToUse.length
-                              ? yearsToUse.slice().sort((a,b)=>a-b)
-                              : Array.from(new Set((ente.compliances || []).map(c => c.year))).sort((a, b) => a - b);
+                              ? yearsToUse.slice().sort((a,b)=>b-a)
+                              : Array.from(new Set((ente.compliances || []).map(c => c.year))).sort((a, b) => b - a);
                             const monthsOrder = months.filter(m=>m!=='Todos');
                             return monthsOrder.map(m=>{
                               const row = { month: m.slice(0,3).toLowerCase() };
@@ -897,7 +899,7 @@ export default function Comparativa() {
 
                           // Generate Bar components for each year dynamically
                           const yearsArr = Array.isArray(selectedYearsLeft) && selectedYearsLeft.length
-                            ? selectedYearsLeft.slice().sort((a,b)=>a-b)
+                            ? selectedYearsLeft.slice().sort((a,b)=>b-a)
                             : [];
 
                           return (
@@ -906,25 +908,21 @@ export default function Comparativa() {
                               <XAxis dataKey="month" tick={<CustomXAxisTick />} />
                               <YAxis domain={[0, 2]} allowDecimals={false} axisLine={false} tick={false} />
                               <Tooltip content={<CustomBarTooltip />} />
-                              {/* Left ente bars (one set per year) */}
+                              {/* Left ente bars (stacked together) */}
                               {yearsArr.map(y => (
-                                <Bar key={`left_${y}_cumplio`} dataKey={`left_${y}_cumplio`} stackId="left" fill="#28a745" stroke="#277A3A" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                <React.Fragment key={`left_${y}`}>
+                                  <Bar dataKey={`left_${y}_cumplio`} stackId={`left_${y}`} fill="#28a745" stroke="#277A3A" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                  <Bar dataKey={`left_${y}_parcial`} stackId={`left_${y}`} fill="#ffc107" stroke="#B59B05" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                  <Bar dataKey={`left_${y}_no`} stackId={`left_${y}`} fill="#dc3545" stroke="#991b1b" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                </React.Fragment>
                               ))}
+                              {/* Right ente bars (stacked together) */}
                               {yearsArr.map(y => (
-                                <Bar key={`left_${y}_parcial`} dataKey={`left_${y}_parcial`} stackId="left" fill="#ffc107" stroke="#B59B05" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
-                              ))}
-                              {yearsArr.map(y => (
-                                <Bar key={`left_${y}_no`} dataKey={`left_${y}_no`} stackId="left" fill="#dc3545" stroke="#991b1b" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
-                              ))}
-                              {/* Right ente bars with reduced opacity (one set per year) */}
-                              {yearsArr.map(y => (
-                                <Bar key={`right_${y}_cumplio`} dataKey={`right_${y}_cumplio`} stackId="right" fill="#28a745" stroke="#277A3A" strokeWidth={1.8} fillOpacity={/*0.6*/0.98} radius={[6, 6, 0, 0]} />
-                              ))}
-                              {yearsArr.map(y => (
-                                <Bar key={`right_${y}_parcial`} dataKey={`right_${y}_parcial`} stackId="right" fill="#ffc107" stroke="#B59B05" strokeWidth={1.8} fillOpacity={/*0.6*/0.98} radius={[6, 6, 0, 0]} />
-                              ))}
-                              {yearsArr.map(y => (
-                                <Bar key={`right_${y}_no`} dataKey={`right_${y}_no`} stackId="right" fill="#dc3545" stroke="#991b1b" strokeWidth={1.8} fillOpacity={/*0.6*/0.98} radius={[6, 6, 0, 0]} />
+                                <React.Fragment key={`right_${y}`}>
+                                  <Bar dataKey={`right_${y}_cumplio`} stackId={`right_${y}`} fill="#28a745" stroke="#277A3A" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                  <Bar dataKey={`right_${y}_parcial`} stackId={`right_${y}`} fill="#ffc107" stroke="#B59B05" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                  <Bar dataKey={`right_${y}_no`} stackId={`right_${y}`} fill="#dc3545" stroke="#991b1b" strokeWidth={1.8} fillOpacity={0.98} radius={[6, 6, 0, 0]} />
+                                </React.Fragment>
                               ))}
                             </BarChart>
                           );
@@ -994,20 +992,35 @@ export default function Comparativa() {
         <div className="card" style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: 'none', padding: '24px' }}>
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#440D1E' }}>Comparación por mes y año</h3>
           <div className="row g-3" style={{ marginBottom: 16 }}>
-            <div className="col-lg-3">
-              <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: 14, marginBottom: 8 }}>Mes:</label>
-              <select
-                className="form-select"
-                value={selectedMonthForChart}
-                onChange={(e) => setSelectedMonthForChart(e.target.value)}
-                style={{ borderRadius: '8px', padding: '12px 18px', fontSize: 15, border: '1px solid #ddd', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}
-              >
-                {months.map((m, i) => (
-                  <option key={i} value={m}>{m}</option>
+            <div className="col-lg-12">
+              <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: 14, marginBottom: 8 }}>Meses (1-12 o todos):</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonthsForChart([])}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    background: selectedMonthsForChart.length === 0 ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0',
+                    color: selectedMonthsForChart.length === 0 ? '#fff' : '#495057',
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Todos
+                </button>
+                {months.filter(m => m !== 'Todos').map(m => (
+                  <label key={m} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 6, background: selectedMonthsForChart.includes(m) ? 'linear-gradient(135deg, #681b32 0%, #200b07 100%)' : '#f0f0f0', color: selectedMonthsForChart.includes(m) ? '#fff' : '#495057', fontWeight: 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.3s ease', border: 'none' }}>
+                    <input type="checkbox" checked={selectedMonthsForChart.includes(m)} onChange={() => toggleMonthForChart(m)} style={{ cursor: 'pointer' }} />
+                    <span>{m.slice(0, 3)}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
-            <div className="col-lg-9">
+            <div className="col-lg-12">
               <label className="form-label" style={{ fontWeight: 500, color: '#495057', fontSize: 14, marginBottom: 8 }}>Años (máximo 3):</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {allYears.map((y) => (
@@ -1025,8 +1038,8 @@ export default function Comparativa() {
               className="btn btn-sm"
               onClick={() => {
                 const years = selectedYearsForMonthChart.join('-');
-                const month = selectedMonthForChart;
-                window.location.href = `/ExportPDFCom?years=${years}&month=${month}`;
+                const months = selectedMonthsForChart.length > 0 ? selectedMonthsForChart.join('-') : 'Todos';
+                window.location.href = `/ExportPDFCom?years=${years}&months=${months}`;
               }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(220,53,69,0.45)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(220, 53, 69, 0.2)'; }}
@@ -1055,8 +1068,8 @@ export default function Comparativa() {
               className="btn btn-sm"
               onClick={() => {
                 const years = selectedYearsForMonthChart.join('-');
-                const month = selectedMonthForChart;
-                window.location.href = `/ExportExcelCom?years=${years}&month=${month}`;
+                const months = selectedMonthsForChart.length > 0 ? selectedMonthsForChart.join('-') : 'Todos';
+                window.location.href = `/ExportExcelCom?years=${years}&months=${months}`;
               }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(20,83,45,0.45)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(20, 83, 45, 0.2)'; }}
@@ -1085,7 +1098,7 @@ export default function Comparativa() {
 
           <div style={{ display: 'grid', gridTemplateColumns: selectedMonthForChart === 'Todos' ? 'repeat(auto-fit, minmax(220px, 1fr))' : 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
             {(() => {
-              const data = buildMonthYearBarData(selectedYearsForMonthChart, selectedMonthForChart);
+              const data = buildMonthYearBarData(selectedYearsForMonthChart, selectedMonthsForChart);
               return data.map((monthData) => {
                 // Calcular totales por año para este mes
                 const yearStats = {};
@@ -1188,6 +1201,7 @@ export default function Comparativa() {
                               <Cell key={`cell-${idx}`} fill={entry.color} />
                             ))}
                           </Pie>
+                          <Tooltip content={<CustomDonutTooltip />} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
