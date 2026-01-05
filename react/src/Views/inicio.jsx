@@ -10,6 +10,7 @@ import grupal from "../assets/grupal.jpg";
 import SemaforoVerde from "../assets/SemaforoVerde.png";
 import SemaforoAmarillo from "../assets/SemaforoAmarillo.png";
 import SemaforoRojo from "../assets/SemaforoRojo.png";
+import Edificio from "../assets/EdificioASEBCS.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
@@ -339,7 +340,7 @@ export default function Inicio() {
         animation: 'headerGradient 8s ease infinite'
       }}>
         <img
-          src="https://api.siret-graficas-interactivas.sifbcs.online/ASEedificioc.png"
+          src={Edificio}
           alt="Edificio ASEBCS"
           className="header-background-image"
           style={{ opacity: 0.75, margin: 0, display: 'block', mixBlendMode: 'overlay' }}
