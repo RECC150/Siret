@@ -43,7 +43,7 @@ const router = createBrowserRouter([
     element: <GuestLayout />,
     children: [
       { path: "", element: <Inicio /> },
-      { path: "/inicio", element: <Inicio /> },
+      { path: "/Inicio", element: <Inicio /> },
       { path: "/cumplimientos", element: <Cumplimientos /> },
       { path: "/cumplimientos/mes-anio", element: <CumplimientosMesAnio /> },
       { path: "/cumplimientos/por-ente", element: <CumplimientosPorEnte /> },
@@ -62,7 +62,7 @@ const router = createBrowserRouter([
       { path: "/ExportExcelEnteCom", element: <ExportExcelEnteCom /> }
     ],
   },
-  // Rutas protegidas después
+
   {
     path: "/",
     element: <DefaultLayout />,

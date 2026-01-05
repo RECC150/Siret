@@ -465,21 +465,32 @@ export default function Inicio() {
                     <div id={collapseId} className="collapse" aria-labelledby={headingId}>
                       <div className="card-body">
                         <div className="contenedor-cuadros">
-                          {entesInGroup.map((ente, entIndex) => (
+                          {entesInGroup.map((ente, entIndex) => ente.link ? (
+                            <a
+                              key={ente.id}
+                              href={ente.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="cuadro"
+                              style={{
+                                animation: `slideUpEntes 0.5s ease-out ${0.05 * entIndex}s forwards`,
+                                opacity: 0,
+                                textDecoration: 'none',
+                                color: 'inherit'
+                              }}
+                            >
+                              <img src={ente.img} alt={ente.title} />
+                              <h3 title={ente.title}>{ente.title}</h3>
+                            </a>
+                          ) : (
                             <div
                               key={ente.id}
                               className="cuadro"
-                              onClick={() => {
-                                if (ente.link) {
-                                  window.open(ente.link, '_blank', 'noopener');
-                                } else {
-                                  setShowNoLinkModal(true);
-                                }
-                              }}
+                              onClick={() => setShowNoLinkModal(true)}
                               tabIndex={0}
                               role="button"
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") setSelected(ente);
+                                if (e.key === "Enter" || e.key === " ") setShowNoLinkModal(true);
                               }}
                               style={{
                                 animation: `slideUpEntes 0.5s ease-out ${0.05 * entIndex}s forwards`,

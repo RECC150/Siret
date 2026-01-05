@@ -15,7 +15,6 @@ export default function SiretEntes() {
   const [editEnte, setEditEnte] = useState(null);
   const editTitleRef = useRef();
   const editClassRef = useRef();
-  const editDescRef = useRef();
   const editLinkRef = useRef();
   const [editIconFile, setEditIconFile] = useState(null);
   const [editIconPreview, setEditIconPreview] = useState(null);
@@ -28,7 +27,6 @@ export default function SiretEntes() {
   const [newIconFile, setNewIconFile] = useState(null);
   const [newIconPreview, setNewIconPreview] = useState(null);
   const newTitleRef = useRef();
-  const newDescRef = useRef();
   const newLinkRef = useRef();
   const [newClassification, setNewClassification] = useState('');
 
@@ -62,7 +60,6 @@ export default function SiretEntes() {
       setNewIconPreview(null);
       setNewClassification('');
       if (newTitleRef.current) newTitleRef.current.value = '';
-      if (newDescRef.current) newDescRef.current.value = '';
       if (newLinkRef.current) newLinkRef.current.value = '';
     });
   };
@@ -113,7 +110,6 @@ export default function SiretEntes() {
     if (!editEnte) return;
     const title = editTitleRef.current?.value?.trim() || editEnte.title;
     const classification = editClassRef.current?.value?.trim() || editEnte.classification;
-    const description = editDescRef.current?.value?.trim() || '';
     const link = editLinkRef.current?.value?.trim() || '';
 
     if (!title) {
@@ -128,23 +124,43 @@ export default function SiretEntes() {
 
     try {
       const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes/${editEnte.id}`;
-      const form = new FormData();
-      form.append('title', title);
-      form.append('classification', classification);
-      form.append('description', description);
-      form.append('link', link);
-      if (editIconFile) form.append('icon', editIconFile);
 
-      const res = await axiosClient.put(apiUrl, form);
+      // If there's a file to upload, use FormData; otherwise use JSON
+      if (editIconFile) {
+        const form = new FormData();
+        form.append('title', title);
+        form.append('classification', classification);
+        form.append('link', link);
+        form.append('icon', editIconFile);
 
-      if (res.data.success) {
-        await fetchEntes();
-        setEditEnte(null);
-        setEditIconFile(null);
-        setEditIconPreview(null);
-        setToast({ message: res.data.message || 'Ente actualizado exitosamente', type: 'success' });
+        const res = await axiosClient.put(apiUrl, form, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (res.data.success) {
+          await fetchEntes();
+          setEditEnte(null);
+          setEditIconFile(null);
+          setEditIconPreview(null);
+          setToast({ message: res.data.message || 'Ente actualizado exitosamente', type: 'success' });
+        } else {
+          setToast({ message: res.data.message || 'Error al actualizar el ente', type: 'error' });
+        }
       } else {
-        setToast({ message: res.data.message || 'Error al actualizar el ente', type: 'error' });
+        const res = await axiosClient.put(apiUrl, {
+          title,
+          classification,
+          link
+        });
+
+        if (res.data.success) {
+          await fetchEntes();
+          setEditEnte(null);
+          setEditIconPreview(null);
+          setToast({ message: res.data.message || 'Ente actualizado exitosamente', type: 'success' });
+        } else {
+          setToast({ message: res.data.message || 'Error al actualizar el ente', type: 'error' });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -156,7 +172,6 @@ export default function SiretEntes() {
   const createEnte = async () => {
     const title = newTitleRef.current?.value?.trim() || '';
     const classification = newClassification || '';
-    const description = newDescRef.current?.value?.trim() || '';
     const link = newLinkRef.current?.value?.trim() || '';
 
     if (!title) {
@@ -171,25 +186,49 @@ export default function SiretEntes() {
 
     try {
       const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes`;
-      const form = new FormData();
-      form.append('title', title);
-      if (classification) form.append('classification', classification);
-      form.append('description', description);
-      form.append('link', link);
-      if (newIconFile) form.append('icon', newIconFile);
 
-      const res = await axiosClient.post(apiUrl, form);
+      // If there's a file to upload, use FormData; otherwise use JSON
+      if (newIconFile) {
+        const form = new FormData();
+        form.append('title', title);
+        form.append('classification', classification);
+        form.append('link', link);
+        form.append('icon', newIconFile);
 
-      if (res.data.success || res.data.id) {
-        await fetchEntes();
-        setAddModalOpen(false);
-        setNewIconFile(null);
-        setNewIconPreview(null);
-        setNewClassification('');
-        if (newTitleRef.current) newTitleRef.current.value = '';
-        setToast({ message: res.data.message || 'Ente creado exitosamente', type: 'success' });
+        const res = await axiosClient.post(apiUrl, form, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (res.data.success || res.data.id) {
+          await fetchEntes();
+          setAddModalOpen(false);
+          setNewIconFile(null);
+          setNewIconPreview(null);
+          setNewClassification('');
+          if (newTitleRef.current) newTitleRef.current.value = '';
+          if (newLinkRef.current) newLinkRef.current.value = '';
+          setToast({ message: res.data.message || 'Ente creado exitosamente', type: 'success' });
+        } else {
+          setToast({ message: res.data.message || 'Error al crear el ente', type: 'error' });
+        }
       } else {
-        setToast({ message: res.data.message || 'Error al crear el ente', type: 'error' });
+        const res = await axiosClient.post(apiUrl, {
+          title,
+          classification,
+          link
+        });
+
+        if (res.data.success || res.data.id) {
+          await fetchEntes();
+          setAddModalOpen(false);
+          setNewIconPreview(null);
+          setNewClassification('');
+          if (newTitleRef.current) newTitleRef.current.value = '';
+          if (newLinkRef.current) newLinkRef.current.value = '';
+          setToast({ message: res.data.message || 'Ente creado exitosamente', type: 'success' });
+        } else {
+          setToast({ message: res.data.message || 'Error al crear el ente', type: 'error' });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -223,7 +262,6 @@ export default function SiretEntes() {
       setEditIconFile(null);
       if (editTitleRef.current) editTitleRef.current.value = editEnte.title || '';
       if (editClassRef.current) editClassRef.current.value = editEnte.classification || '';
-      if (editDescRef.current) editDescRef.current.value = editEnte.description || '';
       if (editLinkRef.current) editLinkRef.current.value = editEnte.link || '';
     } else {
       setEditIconPreview(null);
@@ -520,11 +558,6 @@ export default function SiretEntes() {
                   </div>
                 </div>
               </div>
-
-              <div>
-                <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Descripción <span style={{ color: '#6c757d', fontSize: '13px', fontWeight: 400 }}>(opcional)</span></label>
-                <textarea ref={newDescRef} className="form-control" placeholder="Detalles adicionales del ente..." style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px', minHeight: '140px', resize: 'vertical' }} />
-              </div>
             </div>
 
             <div style={{ borderTop: '1px solid #e9ecef', padding: '14px 24px', background: '#f8f9fa', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
@@ -586,11 +619,6 @@ export default function SiretEntes() {
                     <input defaultValue={editEnte.link} ref={editLinkRef} className="form-control" placeholder="https://ejemplo.com" style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px' }} />
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: '#2c3e50', fontSize: '15px' }}>Descripción <span style={{ color: '#6c757d', fontSize: '13px', fontWeight: 400 }}>(opcional)</span></label>
-                <textarea defaultValue={editEnte.description} ref={editDescRef} className="form-control" placeholder="Detalles adicionales del ente..." style={{ borderRadius: 8, border: '1px solid #ddd', padding: '12px 12px', fontSize: '15px', minHeight: '140px', resize: 'vertical' }} />
               </div>
             </div>
 

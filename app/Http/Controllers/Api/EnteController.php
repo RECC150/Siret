@@ -12,13 +12,13 @@ class EnteController extends Controller
     public function index()
     {
         try {
-            // Verificar si se pide incluir compliances (para vistas como CumplimientosMesAnio)
+
             $withCompliances = request('with_compliances', false);
 
             if ($withCompliances) {
-                // Cargar entes con sus compliances
+
                 $entes = Ente::with(['classification', 'compliances'])
-                    ->select('id', 'title', 'img', 'classification_id')
+                    ->select('id', 'title', 'img', 'classification_id', 'link')
                     ->orderBy('title', 'ASC')
                     ->get();
 
@@ -37,13 +37,14 @@ class EnteController extends Controller
                                 'status' => $c->status,
                                 'note' => $c->note
                             ];
-                        })->toArray()
+                        })->toArray(),
+                        'link' => $e->link
                     ];
                 }
             } else {
-                // Comportamiento original (sin compliances para mejor performance)
+
                 $entes = Ente::with('classification')
-                    ->select('id', 'title', 'img', 'classification_id')
+                    ->select('id', 'title', 'img', 'classification_id', 'link')
                     ->orderBy('title', 'ASC')
                     ->get();
 
@@ -54,7 +55,8 @@ class EnteController extends Controller
                         'title' => $e->title,
                         'img' => $e->img,
                         'classification_id' => $e->classification_id,
-                        'classification' => $e->classification ? $e->classification->name : null
+                        'classification' => $e->classification ? $e->classification->name : null,
+                        'link' => $e->link
                     ];
                 }
             }
@@ -95,10 +97,13 @@ class EnteController extends Controller
                 $imgPath = '/uploads/entes/' . $filename;
             }
 
+            $link = trim($request->input('link', '')) ?: null;
+
             $ente = Ente::create([
                 'title' => $title,
                 'img' => $imgPath,
-                'classification_id' => $classification_id
+                'classification_id' => $classification_id,
+                'link' => $link
             ]);
 
             return response()->json([
@@ -106,6 +111,7 @@ class EnteController extends Controller
                 'id' => $ente->id,
                 'title' => $title,
                 'img' => $imgPath,
+                'link' => $link,
                 'classification' => $ente->classification->name ?? '',
                 'message' => 'Ente creado exitosamente'
             ]);
@@ -130,7 +136,7 @@ class EnteController extends Controller
                 return response()->json(['success' => false, 'error' => 'not_found', 'message' => 'Ente no encontrado'], 404);
             }
 
-            $classification_id = null;
+            $classification_id = $ente->classification_id; // Preserve existing classification
             if ($classificationName !== '') {
                 $classification = Classification::where('name', $classificationName)->first();
                 if ($classification) {
@@ -150,8 +156,11 @@ class EnteController extends Controller
                 $imgPath = '/uploads/entes/' . $filename;
             }
 
+            $link = trim($request->input('link', '')) ?: null;
+
             $ente->title = $title;
             $ente->classification_id = $classification_id;
+            $ente->link = $link;
             if ($imgPath) {
                 $ente->img = $imgPath;
             }
@@ -163,6 +172,7 @@ class EnteController extends Controller
                 'title' => $title,
                 'classification' => $ente->classification->name ?? '',
                 'img' => $imgPath,
+                'link' => $link,
                 'message' => 'Ente actualizado exitosamente'
             ]);
         } catch (\Exception $e) {
@@ -184,7 +194,7 @@ class EnteController extends Controller
                 return response()->json(['success' => false, 'error' => 'not_found', 'message' => 'Ente no encontrado'], 404);
             }
 
-            // Eliminar dependencias usando relaciones Eloquent
+
             $ente->entesActivos()->delete();
             $ente->compliances()->delete();
             $ente->delete();

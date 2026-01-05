@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('entes', function (Blueprint $table) {
-            $table->index('classification_id');
-            $table->index('title');
+            $table->string('link', 500)->nullable()->after('img')->index();
         });
     }
 
@@ -23,8 +22,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('entes', function (Blueprint $table) {
-            $table->dropIndex(['classification_id']);
-            $table->dropIndex(['title']);
+            // Drop index first then column
+            $table->dropIndex(['link']);
+            $table->dropColumn('link');
         });
     }
 };

@@ -24,6 +24,7 @@ import {
 export default function CumplimientosMesAnio() {
   // REEMPLAZO: cargar entes desde API (a partir de la tabla compliances)
   const [entesList, setEntesList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // ref al contenedor para mantener la vista centrada
   const containerRef = useRef(null);
@@ -469,6 +470,7 @@ export default function CumplimientosMesAnio() {
 
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
     // OPTIMIZACIÓN: Cargar solo compliances del año seleccionado
     const yearFilter = year || new Date().getFullYear();
     const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes?with_compliances=1&year=${yearFilter}`;
@@ -480,10 +482,14 @@ export default function CumplimientosMesAnio() {
         } else {
           setEntesList(entesListFallback);
         }
+        setIsLoading(false);
       })
       .catch(() => {
         // Si falla la petición, usamos los datos locales (fallback)
-        if (mounted) setEntesList(entesListFallback);
+        if (mounted) {
+          setEntesList(entesListFallback);
+          setIsLoading(false);
+        }
       });
     return () => { mounted = false; };
   }, [year]);
@@ -872,7 +878,13 @@ const computeICForEnteYear = (ente, y) => {
         </div>
 
 
-          {results.length === 0 ? (
+          {isLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px 20px' }}>
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+          ) : results.length === 0 ? (
             <p>No se encontraron entidades que cumplan ese criterio.</p>
           ) : (
             <div className="list-group">

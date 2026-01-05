@@ -12,7 +12,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Responsive font sizes */
+
   --base-font-size: clamp(14px, 2vw, 16px);
   --heading-size: clamp(24px, 5vw, 32px);
 }

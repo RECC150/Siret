@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Ente extends Model
 {
     protected $table = 'entes';
-    protected $fillable = ['title', 'img', 'classification_id'];
-    public $timestamps = false;
+    protected $fillable = ['title', 'img', 'classification_id', 'link'];
+    public $timestamps = true;
 
     public function classification()
     {
