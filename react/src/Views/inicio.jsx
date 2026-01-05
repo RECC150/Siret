@@ -339,7 +339,7 @@ export default function Inicio() {
         animation: 'headerGradient 8s ease infinite'
       }}>
         <img
-          src="http://localhost/siret/storage/app/public/ASEedificioc.png"
+          src="https://api.siret-graficas-interactivas.sifbcs.online/ASEedificioc.png"
           alt="Edificio ASEBCS"
           className="header-background-image"
           style={{ opacity: 0.75, margin: 0, display: 'block', mixBlendMode: 'overlay' }}
