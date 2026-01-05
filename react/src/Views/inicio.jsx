@@ -10,7 +10,7 @@ import grupal from "../assets/grupal.jpg";
 import SemaforoVerde from "../assets/SemaforoVerde.png";
 import SemaforoAmarillo from "../assets/SemaforoAmarillo.png";
 import SemaforoRojo from "../assets/SemaforoRojo.png";
-import Edificio from "../assets/EdificioASEBCS.png";
+import Edificio from "../assets/ASEedificioc.png";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
