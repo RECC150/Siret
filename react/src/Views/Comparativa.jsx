@@ -19,6 +19,7 @@ import {
 export default function Comparativa() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [viewMode, setViewMode] = useState('por-ente'); // 'por-ente' | 'por-mes-anio'
+  const [isLoading, setIsLoading] = useState(true);
 
   const months = [
     'Todos', 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
@@ -79,10 +80,21 @@ export default function Comparativa() {
 
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
     const apiUrl = `${(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')}/entes?with_compliances=1`;
     axiosClient.get(apiUrl)
-      .then(res => { if (!mounted) return; if (Array.isArray(res.data)) setEntesList(res.data); else setEntesList(entesListFallback); })
-      .catch(()=> { if (mounted) setEntesList(entesListFallback); });
+      .then(res => {
+        if (!mounted) return;
+        if (Array.isArray(res.data)) setEntesList(res.data);
+        else setEntesList(entesListFallback);
+        setIsLoading(false);
+      })
+      .catch(()=> {
+        if (mounted) {
+          setEntesList(entesListFallback);
+          setIsLoading(false);
+        }
+      });
     return () => { mounted = false; };
   }, []);
 
@@ -685,7 +697,15 @@ export default function Comparativa() {
               </div>
 
               <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #e9ecef', borderRadius: 8, padding: 12, background: '#f8f9fa' }}>
-                {(!selectedLeft && filteredLeft.length === 0) && <div className="text-muted">No hay entes.</div>}
+                {isLoading ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+                    <div className="spinner-border" role="status" style={{ color: '#681b32' }}>
+                      <span className="visually-hidden">Cargando...</span>
+                    </div>
+                  </div>
+                ) : (!selectedLeft && filteredLeft.length === 0) ? (
+                  <div className="text-muted">No hay entes.</div>
+                ) : null}
                 {!selectedLeft && filteredLeft.sort((a,b)=> (a.id===selectedLeft?.id? -1 : 0)).map(e=> (
                   <div key={e.id} className="d-flex align-items-center justify-content-between p-3" style={{ borderBottom: '1px solid #e9ecef', background: '#fff', marginBottom: 8, borderRadius: 6 }}>
                     <div>
@@ -729,7 +749,15 @@ export default function Comparativa() {
               </div>
 
             <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #e9ecef', borderRadius: 8, padding: 12, background: '#f8f9fa' }}>
-              {(!selectedRight && filteredRight.length === 0) && <div className="text-muted">No hay entes.</div>}
+              {isLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+                  <div className="spinner-border" role="status" style={{ color: '#681b32' }}>
+                    <span className="visually-hidden">Cargando...</span>
+                  </div>
+                </div>
+              ) : (!selectedRight && filteredRight.length === 0) ? (
+                <div className="text-muted">No hay entes.</div>
+              ) : null}
               {!selectedRight && filteredRight.sort((a,b)=> (a.id===selectedRight?.id? -1 : 0)).map(e=> (
                 <div key={e.id} className="d-flex align-items-center justify-content-between p-3" style={{ borderBottom: '1px solid #e9ecef', background: '#fff', marginBottom: 8, borderRadius: 6 }}>
                   <div>

@@ -863,7 +863,7 @@ useEffect(() => {
 
           {isLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px 20px' }}>
-              <div className="spinner-border text-primary" role="status">
+              <div className="spinner-border" role="status" style={{ color: '#681b32' }}>
                 <span className="visually-hidden">Cargando...</span>
               </div>
             </div>
