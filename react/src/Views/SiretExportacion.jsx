@@ -142,12 +142,12 @@ export default function SiretExportacion(){
         url.host = 'api.' + url.host;
       }
       const origin = url.origin;
-      if (imgPath.startsWith('/storage')) return `${origin}${imgPath}`;
-      if (imgPath.startsWith('/')) return `${origin}/storage/app/public${imgPath}`;
-      return `${origin}/storage/app/public/${imgPath}`;
+      if (imgPath.startsWith('/storage')) return imgPath;
+      if (imgPath.startsWith('/')) return imgPath;
+      return imgPath;
     } catch (e) {
-      if (imgPath.startsWith('/storage')) return `${base}${imgPath}`;
-      if (imgPath.startsWith('/')) return `${base}/storage/app/public${imgPath}`;
+      if (imgPath.startsWith('/storage')) return imgPath;
+      if (imgPath.startsWith('/')) return imgPath;
       return `${base}/storage/app/public/${imgPath}`;
     }
   };

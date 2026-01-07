@@ -6,26 +6,11 @@ import axiosClient from '../axios-client';
 import ASEBCS from "../assets/asebcs.jpg";
 import a from "../assets/a.png";
 
-// Helper to resolve full image URLs (ensures API storage domain is used)
+// Helper to resolve full image URLs — return DB value as-is (do not prepend API host)
 const getFullImageUrl = (imgPath) => {
   if (!imgPath) return ASEBCS;
   if (/^https?:\/\//i.test(imgPath)) return imgPath;
-  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-  if (!base) return imgPath;
-  try {
-    const url = new URL(base);
-    if (!url.host.startsWith('api.')) {
-      url.host = 'api.' + url.host;
-    }
-    const origin = url.origin;
-    if (imgPath.startsWith('/storage')) return `${origin}${imgPath}`;
-    if (imgPath.startsWith('/')) return `${origin}/storage/app/public${imgPath}`;
-    return `${origin}/storage/app/public/${imgPath}`;
-  } catch (e) {
-    if (imgPath.startsWith('/storage')) return `${base}${imgPath}`;
-    if (imgPath.startsWith('/')) return `${base}/storage/app/public${imgPath}`;
-    return `${base}/storage/app/public/${imgPath}`;
-  }
+  return imgPath;
 };
 
 // Añadido: Recharts para los pies y BarChart (reemplazo de AreaChart)
