@@ -16,10 +16,14 @@ const getFullImageUrl = (imgPath) => {
     if (!url.host.startsWith('api.')) {
       url.host = 'api.' + url.host;
     }
-    const storageBase = url.origin;
-    return `${storageBase}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    const origin = url.origin;
+    if (imgPath.startsWith('/storage')) return `${origin}${imgPath}`;
+    if (imgPath.startsWith('/')) return `${origin}/storage/app/public${imgPath}`;
+    return `${origin}/storage/app/public/${imgPath}`;
   } catch (e) {
-    return `${base}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    if (imgPath.startsWith('/storage')) return `${base}${imgPath}`;
+    if (imgPath.startsWith('/')) return `${base}/storage/app/public${imgPath}`;
+    return `${base}/storage/app/public/${imgPath}`;
   }
 };
 import a from "../assets/a.png";

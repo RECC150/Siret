@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ente;
 use App\Models\Classification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EnteController extends Controller
 {
@@ -93,8 +94,10 @@ class EnteController extends Controller
                 $file = $request->file('icon');
                 $extension = $file->getClientOriginalExtension();
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
-                $file->move(public_path('uploads/entes'), $filename);
-                $imgPath = '/uploads/entes/' . $filename;
+                // store in public disk (storage/app/public/entes)
+                $path = $file->storeAs('entes', $filename, 'public');
+                // returns something like /storage/entes/filename
+                $imgPath = Storage::url($path);
             }
 
             $link = trim($request->input('link', '')) ?: null;
@@ -152,8 +155,10 @@ class EnteController extends Controller
                 $file = $request->file('icon');
                 $extension = $file->getClientOriginalExtension();
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
-                $file->move(public_path('uploads/entes'), $filename);
-                $imgPath = '/uploads/entes/' . $filename;
+                // store in public disk (storage/app/public/entes)
+                $path = $file->storeAs('entes', $filename, 'public');
+                // returns something like /storage/entes/filename
+                $imgPath = Storage::url($path);
             }
 
             $link = trim($request->input('link', '')) ?: null;
