@@ -105,6 +105,24 @@ export default function SiretEntes() {
   useEffect(() => { fetchEntes(); }, []);
   useEffect(() => { fetchClasificaciones(); }, []);
 
+  // Helper to resolve full image URLs (ensures API storage domain is used)
+  const getFullImageUrl = (imgPath) => {
+    if (!imgPath) return ASEBCS;
+    if (/^https?:\/\//i.test(imgPath)) return imgPath;
+    const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    if (!base) return imgPath;
+    try {
+      const url = new URL(base);
+      if (!url.host.startsWith('api.')) {
+        url.host = 'api.' + url.host;
+      }
+      const storageBase = url.origin;
+      return `${storageBase}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    } catch (e) {
+      return `${base}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    }
+  };
+
   // Edit ente
   const saveEdit = async () => {
     if (!editEnte) return;
@@ -127,15 +145,15 @@ export default function SiretEntes() {
 
       // If there's a file to upload, use FormData; otherwise use JSON
       if (editIconFile) {
+        // Use POST with _method=PUT so PHP/Laravel parses multipart form uploads correctly
         const form = new FormData();
+        form.append('_method', 'PUT');
         form.append('title', title);
         form.append('classification', classification);
         form.append('link', link);
         form.append('icon', editIconFile);
 
-        const res = await axiosClient.put(apiUrl, form, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const res = await axiosClient.post(apiUrl, form);
 
         if (res.data.success) {
           await fetchEntes();
@@ -195,9 +213,7 @@ export default function SiretEntes() {
         form.append('link', link);
         form.append('icon', newIconFile);
 
-        const res = await axiosClient.post(apiUrl, form, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const res = await axiosClient.post(apiUrl, form);
 
         if (res.data.success || res.data.id) {
           await fetchEntes();
@@ -258,7 +274,7 @@ export default function SiretEntes() {
   // Initialize edit modal preview when editEnte changes
   React.useEffect(() => {
     if (editEnte) {
-      setEditIconPreview(editEnte.img || ASEBCS);
+      setEditIconPreview(getFullImageUrl(editEnte.img));
       setEditIconFile(null);
       if (editTitleRef.current) editTitleRef.current.value = editEnte.title || '';
       if (editClassRef.current) editClassRef.current.value = editEnte.classification || '';
@@ -436,7 +452,7 @@ export default function SiretEntes() {
                 displayed.map(e => (
                   <div key={e.id} style={{ background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e9ecef' }}>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-                      <img src={e.img || ASEBCS} alt={e.title} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8, border: '2px solid #e9ecef', flexShrink: 0 }} />
+                      <img src={getFullImageUrl(e.img)} alt={e.title} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8, border: '2px solid #e9ecef', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, marginBottom: 4, wordBreak: 'break-word' }}>{e.title}</div>
                         <div style={{ fontSize: '13px', color: '#6c757d' }}>{e.classification}</div>
@@ -481,7 +497,7 @@ export default function SiretEntes() {
                   <tr key={e.id} style={{ transition: 'background 0.2s ease', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
                     <td style={{ borderBottom: '1px solid #e9ecef', padding: '16px' }}>
                       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                        <img src={e.img || ASEBCS} alt={e.title} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8, border: '2px solid #e9ecef' }} />
+                        <img src={getFullImageUrl(e.img)} alt={e.title} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 8, border: '2px solid #e9ecef' }} />
                         <div style={{ fontWeight: 600 }}>{e.title}</div>
                       </div>
                     </td>

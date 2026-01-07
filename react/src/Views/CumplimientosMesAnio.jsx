@@ -5,6 +5,25 @@ import axiosClient from '../axios-client';
 
 import ASEBCS from "../assets/asebcs.jpg";
 import a from "../assets/a.png";
+
+// Helper to resolve full image URLs (ensures API storage domain is used)
+const getFullImageUrl = (imgPath) => {
+  if (!imgPath) return ASEBCS;
+  if (/^https?:\/\//i.test(imgPath)) return imgPath;
+  const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  if (!base) return imgPath;
+  try {
+    const url = new URL(base);
+    if (!url.host.startsWith('api.')) {
+      url.host = 'api.' + url.host;
+    }
+    const storageBase = url.origin;
+    return `${storageBase}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+  } catch (e) {
+    return `${base}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+  }
+};
+
 // Añadido: Recharts para los pies y BarChart (reemplazo de AreaChart)
 import {
   PieChart,
@@ -890,7 +909,7 @@ const computeICForEnteYear = (ente, y) => {
             <div className="list-group">
               {results.map(r => (
                 <div key={r.id} className={`list-group-item ${styles.listGroupItem}`}>
-                  <div className={styles.listGroupImage}><img src={r.img} alt={r.title} style={{maxWidth:88,maxHeight:88}} onError={(e) => {e.target.style.display = 'none';}}/></div>
+                  <div className={styles.listGroupImage}><img src={getFullImageUrl(r.img)} alt={r.title} style={{maxWidth:88,maxHeight:88}} onError={(e) => {e.target.style.display = 'none';}}/></div>
                   <div className={styles.listGroupContent}>
                     <h5 className={`mb-1 ${styles.listGroupTitle}`} style={{fontWeight: 700, color: '#440D1E'}}>{r.title}</h5>
                     <p className="mb-1"><small style={{fontSize: 14, color: '#6c757d'}}>{r.classification}</small></p>

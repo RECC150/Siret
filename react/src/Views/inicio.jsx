@@ -24,6 +24,24 @@ export default function Inicio() {
   const [expandedGroups, setExpandedGroups] = useState({});
   const navigate = useNavigate();
 
+  // Helper to resolve full image URLs (ensures API storage domain is used)
+  const getFullImageUrl = (imgPath) => {
+    if (!imgPath) return ASEBCS;
+    if (/^https?:\/\//i.test(imgPath)) return imgPath;
+    const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    if (!base) return imgPath;
+    try {
+      const url = new URL(base);
+      if (!url.host.startsWith('api.')) {
+        url.host = 'api.' + url.host;
+      }
+      const storageBase = url.origin;
+      return `${storageBase}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    } catch (e) {
+      return `${base}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    }
+  };
+
   const onSubmit = async (ev) => {};
 
   const toggle = (idx) => {
@@ -480,7 +498,7 @@ export default function Inicio() {
                                 color: 'inherit'
                               }}
                             >
-                              <img src={ente.img} alt={ente.title} />
+                              <img src={getFullImageUrl(ente.img)} alt={ente.title} />
                               <h3 title={ente.title}>{ente.title}</h3>
                             </a>
                           ) : (
@@ -498,7 +516,7 @@ export default function Inicio() {
                                 opacity: 0,
                               }}
                             >
-                              <img src={ente.img} alt={ente.title} />
+                              <img src={getFullImageUrl(ente.img)} alt={ente.title} />
                               <h3 title={ente.title}>{ente.title}</h3>
                             </div>
                           ))}

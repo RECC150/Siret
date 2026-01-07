@@ -130,6 +130,24 @@ export default function SiretExportacion(){
 
   const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
+  // Helper to resolve full image URLs (ensures API storage domain is used)
+  const getFullImageUrl = (imgPath) => {
+    if (!imgPath) return ASEBCS;
+    if (/^https?:\/\//i.test(imgPath)) return imgPath;
+    const base = apiBase;
+    if (!base) return imgPath;
+    try {
+      const url = new URL(base);
+      if (!url.host.startsWith('api.')) {
+        url.host = 'api.' + url.host;
+      }
+      const storageBase = url.origin;
+      return `${storageBase}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    } catch (e) {
+      return `${base}/storage/app/public${imgPath.startsWith('/') ? imgPath : '/' + imgPath}`;
+    }
+  };
+
   // Funciones helper para cerrar modales con animación
   const closeModalWithAnimation = (modalIndex, callback) => {
     setClosingModalIndex(modalIndex);
@@ -1138,7 +1156,7 @@ export default function SiretExportacion(){
                   {list.map(e => (
                     <div key={e.id} className="list-group-item list-group-item-action d-flex align-items-center" style={{ flexDirection: windowWidth < 768 ? 'column' : 'row', textAlign: windowWidth < 768 ? 'center' : 'left', padding: windowWidth < 768 ? '16px' : '12px' }}>
                       <div style={{ width: windowWidth < 768 ? 80 : 96, height: windowWidth < 768 ? 80 : 96, flex: windowWidth < 768 ? '0 0 80px' : '0 0 96px', marginBottom: windowWidth < 768 ? 12 : 0, marginRight: windowWidth < 768 ? 0 : 12 }} className="d-flex align-items-center justify-content-center">
-                        <img src={e.img || ASEBCS} alt={e.title} style={{ maxWidth: windowWidth < 768 ? '72px' : '88px', maxHeight: windowWidth < 768 ? '72px' : '88px', objectFit: 'contain' }} />
+                        <img src={getFullImageUrl(e.img)} alt={e.title} style={{ maxWidth: windowWidth < 768 ? '72px' : '88px', maxHeight: windowWidth < 768 ? '72px' : '88px', objectFit: 'contain' }} />
                       </div>
                       <div className="flex-grow-1" style={{ width: windowWidth < 768 ? '100%' : 'auto' }}>
                         <h5 className="mb-1" style={{ margin: 0, fontSize: windowWidth < 768 ? 16 : 18, fontWeight: 600 }}>{e.title}</h5>
