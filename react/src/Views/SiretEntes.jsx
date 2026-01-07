@@ -112,7 +112,7 @@ export default function SiretEntes() {
     if (/^https?:\/\//i.test(imgPath)) return imgPath;
     // Otherwise return the path exactly as stored in DB (e.g. /storage/entes/filename.png)
     return imgPath;
-  }; 
+  };
 
   // Edit ente
   const saveEdit = async () => {

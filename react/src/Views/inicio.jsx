@@ -29,7 +29,7 @@ export default function Inicio() {
     if (!imgPath) return ASEBCS;
     if (/^https?:\/\//i.test(imgPath)) return imgPath;
     return imgPath;
-  }; 
+  };
 
   const onSubmit = async (ev) => {};
 
