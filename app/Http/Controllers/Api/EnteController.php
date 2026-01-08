@@ -97,6 +97,19 @@ class EnteController extends Controller
                 // store in public disk (storage/app/public/entes)
                 $path = $file->storeAs('entes', $filename, 'public');
 
+                // Also copy the stored file into public/storage so hosts without storage:link can serve it
+                $storedFullPath = storage_path('app/public/' . $path);
+                $publicPath = public_path('storage/' . $path);
+                $publicDir = dirname($publicPath);
+                if (!file_exists($publicDir)) {
+                    @mkdir($publicDir, 0755, true);
+                }
+                try {
+                    @copy($storedFullPath, $publicPath);
+                } catch (\Exception $e) {
+                    // non-fatal: file might be unreadable or copy may fail on some systems
+                }
+
                 // Build API host URLs as requested by deployment (primary + fallback)
                 $apiHost = 'https://api.siret-graficas-interactivas.sifbcs.online';
                 // Primary: https://api.../storage/<filename>
@@ -163,6 +176,19 @@ class EnteController extends Controller
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
                 // store in public disk (storage/app/public/entes)
                 $path = $file->storeAs('entes', $filename, 'public');
+
+                // Also copy the stored file into public/storage so hosts without storage:link can serve it
+                $storedFullPath = storage_path('app/public/' . $path);
+                $publicPath = public_path('storage/' . $path);
+                $publicDir = dirname($publicPath);
+                if (!file_exists($publicDir)) {
+                    @mkdir($publicDir, 0755, true);
+                }
+                try {
+                    @copy($storedFullPath, $publicPath);
+                } catch (\Exception $e) {
+                    // ignore copy errors
+                }
 
                 // Build API host URLs as requested by deployment
                 $apiHost = 'https://api.siret-graficas-interactivas.sifbcs.online';
