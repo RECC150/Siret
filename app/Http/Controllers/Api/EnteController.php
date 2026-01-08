@@ -92,31 +92,13 @@ class EnteController extends Controller
             $imgPath = null;
             if ($request->hasFile('icon') && $request->file('icon')->isValid()) {
                 $file = $request->file('icon');
-                $extension = $file->getClientOriginalExtension();
-                $filename = bin2hex(random_bytes(8)) . '.' . $extension;
-                // store in public disk (storage/app/public/entes)
-                $path = $file->storeAs('entes', $filename, 'public');
+                $filename = time() . '.' . $file->getClientOriginalExtension();
 
-                // Also copy the stored file into public/storage so hosts without storage:link can serve it
-                $storedFullPath = storage_path('app/public/' . $path);
-                $publicPath = public_path('storage/' . $path);
-                $publicDir = dirname($publicPath);
-                if (!file_exists($publicDir)) {
-                    @mkdir($publicDir, 0755, true);
-                }
-                try {
-                    @copy($storedFullPath, $publicPath);
-                } catch (\Exception $e) {
-                    // non-fatal: file might be unreadable or copy may fail on some systems
-                }
+                // Guardar directamente en public/storage
+                $file->move(public_path('storage'), $filename);
 
-                // Build API host URLs as requested by deployment (primary + fallback)
-                $apiHost = 'https://api.siret-graficas-interactivas.sifbcs.online';
-                // Primary: https://api.../storage/<filename>
-                $imgPath = $apiHost . '/storage/' . $filename;
-                // Also store a fallback path in case needed by the frontend logic (not saved to DB)
-                $fallbackStoragePath = $apiHost . '/storage/app/public/' . $filename;
-                // Note: we save $imgPath in DB so frontend gets the api host URL without /entes/
+                // Actualizar el campo en la base de datos
+                $imgPath = 'https://api.siret-graficas-interactivas.sifbcs.online/storage/' . $filename;
             }
 
             $link = trim($request->input('link', '')) ?: null;
@@ -172,28 +154,13 @@ class EnteController extends Controller
             $imgPath = null;
             if ($request->hasFile('icon') && $request->file('icon')->isValid()) {
                 $file = $request->file('icon');
-                $extension = $file->getClientOriginalExtension();
-                $filename = bin2hex(random_bytes(8)) . '.' . $extension;
-                // store in public disk (storage/app/public/entes)
-                $path = $file->storeAs('entes', $filename, 'public');
+                $filename = time() . '.' . $file->getClientOriginalExtension();
 
-                // Also copy the stored file into public/storage so hosts without storage:link can serve it
-                $storedFullPath = storage_path('app/public/' . $path);
-                $publicPath = public_path('storage/' . $path);
-                $publicDir = dirname($publicPath);
-                if (!file_exists($publicDir)) {
-                    @mkdir($publicDir, 0755, true);
-                }
-                try {
-                    @copy($storedFullPath, $publicPath);
-                } catch (\Exception $e) {
-                    // ignore copy errors
-                }
+                // Guardar directamente en public/storage
+                $file->move(public_path('storage'), $filename);
 
-                // Build API host URLs as requested by deployment
-                $apiHost = 'https://api.siret-graficas-interactivas.sifbcs.online';
-                $imgPath = $apiHost . '/storage/' . $filename;
-                $fallbackStoragePath = $apiHost . '/storage/app/public/' . $filename;
+                // Actualizar el campo en la base de datos
+                $imgPath = 'https://api.siret-graficas-interactivas.sifbcs.online/storage/' . $filename;
             }
 
             $link = trim($request->input('link', '')) ?: null;
