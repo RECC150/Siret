@@ -690,7 +690,7 @@ export default function SiretExportPDF(){
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         <h2 style={titleStyle}>Exportación PDF</h2>
-        <p style={{ marginTop: 4, opacity: 0.8 }}>Años {years.length > 0 ? years.join(', ') : '—'} - General</p>
+        <p style={{ marginTop: 4, opacity: 0.8 }}>Años {years.length > 0 ? years.join(', ') : '—'} - Comparación de años</p>
         <div style={{ marginTop: 16 }}>
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
             onClick={()=>window.history.back()}

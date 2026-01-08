@@ -147,7 +147,7 @@ export default function SiretExportExcelEnte(){
 
                   ws['!cols'] = [ { wch:18 }, ...selectedYears.map(()=>({ wch:12 })) ];
                   XLSX.utils.book_append_sheet(wb, ws, 'Por Ente');
-                  XLSX.writeFile(wb, `Cumplimientos_ente_${selectedEnteId}_${selectedYears.join('-')}.xlsx`);
+                  XLSX.writeFile(wb, `Cumplimientos_${selectedEnte ? selectedEnte.title.replace(/[^a-zA-Z0-9]/g, '_') : 'ente'}_${selectedYears.join('-')}.xlsx`);
                 }}
                 style={{ ...btnStyle, background: '#217346' }}
               >

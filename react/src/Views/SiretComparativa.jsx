@@ -562,52 +562,6 @@ export default function Comparativa() {
           border-color: #85435e !important;
         }
       `}</style>
-      {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand d-flex align-items-center" href="#">
-            <img src={ASEBCS} alt="Logo SIRET" width="80" height="40" className="me-2" />
-            {/* Cumplimientos mensuales y cuentas públicas anuales de los Entes Públicos de Baja California Sur */}
-            ASEBCS
-          </a>
-          <button
-            className="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigaltion"
-          >
-            <span className="navbar-toggler-icon" />
-          </button>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <a className="nav-link" href="/inicio">Inicio</a>
-              </li>
-              <li className="nav-item dropdown">
-                <a
-                  className="nav-link dropdown-toggle active"
-                  href="#"
-                  id="cumplimientosDropdown"
-                  role="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Cumplimientos
-                </a>
-                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="cumplimientosDropdown">
-                  <li><a className="dropdown-item" href="/cumplimientos/mes-anio">Por mes y año</a></li>
-                  <li><a className="dropdown-item" href="/cumplimientos/por-ente">Por ente</a></li>
-                  <li><a className="dropdown-item" href="/cumplimientos/por-clasificacion">Por clasificación de entes</a></li>
-                  <li><a className="dropdown-item" href="/comparativa">Comparativa</a></li>
-                </ul>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
 
       <div className="container py-5">
       <div style={{ width: '100%', marginTop: 0, marginBottom: 20 }}>

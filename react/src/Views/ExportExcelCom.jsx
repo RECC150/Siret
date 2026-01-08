@@ -419,7 +419,7 @@ export default function SiretExportExcel(){
                 {sidebarVisible && (
                     <div style={innerSidebarStyle}>
                         <h2 style={{ margin:0, fontWeight:800, letterSpacing:.5 }}>Exportación Excel</h2>
-						<p style={{ margin:'4px 0 0', opacity:.9, fontSize:16, fontWeight:700 }}>Años {years.length > 0 ? years.join(', ') : '—'} - General</p>
+						<p style={{ margin:'4px 0 0', opacity:.9, fontSize:16, fontWeight:700 }}>Años {years.length > 0 ? years.join(', ') : '—'} - Comparación de años</p>
                         {years.length === 0 && <p style={{ fontSize:12, background:'rgba(220,53,69,.15)', padding:'6px 8px', borderRadius:6, fontWeight:600 }}>Falta parámetro years.</p>}
 						<div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                             <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:.98 }} onClick={()=>window.history.back()} style={{ ...btnStyle, background:'#13492f' }}>

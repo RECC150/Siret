@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { motion } from 'framer-motion';
 import axiosClient from '../axios-client';
 
@@ -128,7 +128,15 @@ export default function SiretExportExcelEnteCom(){
                   months.forEach((m) => {
                     const sLeft = getStatusForMonthYear(selectedEnteIdLeft, m, selectedYears[0]);
                     const sRight = getStatusForMonthYear(selectedEnteIdRight, m, selectedYears[0]);
-                    aoa.push([m, sLeft || '-', sRight || '-']);
+                    let leftLetter = '-';
+                    if (sLeft === 'cumplio') leftLetter = 'C';
+                    else if (sLeft === 'parcial') leftLetter = 'P';
+                    else if (sLeft === 'no') leftLetter = 'N';
+                    let rightLetter = '-';
+                    if (sRight === 'cumplio') rightLetter = 'C';
+                    else if (sRight === 'parcial') rightLetter = 'P';
+                    else if (sRight === 'no') rightLetter = 'N';
+                    aoa.push([m, leftLetter, rightLetter]);
                   });
 
                   // Fila de IC
@@ -136,11 +144,27 @@ export default function SiretExportExcelEnteCom(){
                   const pctRightStats = computePercentagesForEnte(selectedEnteIdRight);
                   aoa.push(['IC TOTAL', `${pctLeftStats.cumplio}%`, `${pctRightStats.cumplio}%`]);
 
+                  // Leyenda
+                  aoa.push([]);
+                  aoa.push(['Leyenda: C = Cumplió, P = Parcial, N = No']);
+
                   const wb = XLSX.utils.book_new();
                   const ws = XLSX.utils.aoa_to_sheet(aoa);
                   ws['!cols'] = [ { wch:18 }, { wch:25 }, { wch:25 } ];
+
+                  // Aplicar bordes a todas las celdas
+                  const borderStyle = { style: 'thin', color: { rgb: 'FF000000' } };
+                  for (let r = 0; r < aoa.length; r++) {
+                    for (let c = 0; c < aoa[r].length; c++) {
+                      const cellAddr = XLSX.utils.encode_cell({ r, c });
+                      if (ws[cellAddr]) {
+                        ws[cellAddr].s = { border: { top: borderStyle, right: borderStyle, bottom: borderStyle, left: borderStyle } };
+                      }
+                    }
+                  }
+
                   XLSX.utils.book_append_sheet(wb, ws, 'Comparativa');
-                  XLSX.writeFile(wb, `SIRET_comparativo_${selectedEnteIdLeft}-${selectedEnteIdRight}_${selectedYears.join('-')}.xlsx`);
+                  XLSX.writeFile(wb, `SIRET_comparativo_${selectedEnteLeft.title.replace(/[^a-zA-Z0-9]/g, '_')}-${selectedEnteRight.title.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedYears.join('-')}.xlsx`);
                 }}
                 style={{ ...btnStyle, background: '#217346' }}
                 disabled={loading || error || (!selectedEnteIdLeft && !selectedEnteIdRight) || !selectedYears.length}
@@ -207,6 +231,5 @@ export default function SiretExportExcelEnteCom(){
     </div>
   );
 }
-
 
 
