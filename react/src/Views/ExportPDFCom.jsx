@@ -4,12 +4,6 @@ import jsPDF from 'jspdf';
 import asebcsLogo from '../assets/asebcs.jpg';
 import axiosClient from '../axios-client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import jsPDF from 'jspdf';
-import asebcsLogo from '../assets/asebcs.jpg';
-import axiosClient from '../axios-client';
-
 export default function SiretExportPDF(){
   const params = new URLSearchParams(window.location.search);
   const yearsParam = params.get('years'); // "2033-2034-2035"
