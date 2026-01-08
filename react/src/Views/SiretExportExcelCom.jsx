@@ -443,7 +443,7 @@ export default function SiretExportExcel(){
             <motion.main style={contentStyle} initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:.4 }}>
                 <motion.div initial={{ scale:.98, opacity:0 }} animate={{ scale:1, opacity:1 }} transition={{ duration:.35 }} style={{ background:'#fff', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.08)', padding:32 }}>
                     <h3 style={{ marginTop:0, fontWeight:800, color:'#2c3e50', letterSpacing:.5 }}>Exportación Excel {years.length > 0 && `(${years.join(', ')})`}</h3>
-                    {!loading && error && <p style={{ color:'#dc3545', fontWeight:600 }}>{error}</p>}
+                    {!loading && error && previewData.length === 0 && <p style={{ color:'#dc3545', fontWeight:600 }}>{error}</p>}
                     {years.length > 0 && (
                         <>
 							{previewData.length>0 && (

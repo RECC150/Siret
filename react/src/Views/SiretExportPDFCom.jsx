@@ -795,7 +795,7 @@ export default function SiretExportPDF(){
             <p style={{ color:'#dc3545', fontWeight:600 }}>Selecciona años desde la página anterior.</p>
           </div>
         )}
-        {years && years.length > 0 && !loading && error && (
+        {years && years.length > 0 && !loading && error && compliances.length === 0 && entes.length === 0 && (
           <div style={{ padding: 32 }}>
             <p style={{ color:'#dc3545' }}>{error}</p>
           </div>
