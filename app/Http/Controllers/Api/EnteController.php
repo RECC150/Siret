@@ -96,8 +96,14 @@ class EnteController extends Controller
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
                 // store in public disk (storage/app/public/entes)
                 $path = $file->storeAs('entes', $filename, 'public');
-                // returns something like /storage/entes/filename
-                $imgPath = Storage::url($path);
+                // returns something like /storage/entes/filename or a full URL
+                $storageUrl = Storage::url($path);
+                if (preg_match('/^https?:\/\//i', $storageUrl)) {
+                    $imgPath = $storageUrl;
+                } else {
+                    $appUrl = rtrim(config('app.url', ''), '/');
+                    $imgPath = ($appUrl ? $appUrl : '') . $storageUrl;
+                }
             }
 
             $link = trim($request->input('link', '')) ?: null;
@@ -157,8 +163,14 @@ class EnteController extends Controller
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
                 // store in public disk (storage/app/public/entes)
                 $path = $file->storeAs('entes', $filename, 'public');
-                // returns something like /storage/entes/filename
-                $imgPath = Storage::url($path);
+                // returns something like /storage/entes/filename or a full URL
+                $storageUrl = Storage::url($path);
+                if (preg_match('/^https?:\/\//i', $storageUrl)) {
+                    $imgPath = $storageUrl;
+                } else {
+                    $appUrl = rtrim(config('app.url', ''), '/');
+                    $imgPath = ($appUrl ? $appUrl : '') . $storageUrl;
+                }
             }
 
             $link = trim($request->input('link', '')) ?: null;

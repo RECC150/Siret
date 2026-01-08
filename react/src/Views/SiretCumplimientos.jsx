@@ -1105,6 +1105,8 @@ export default function SiretCumplimientos(){
                     }
                   }
                   setDisplayYears([newYear, ...displayYears]);
+                  // Also add the new year to availableYears so the edit view selector updates immediately
+                  setAvailableYears(prev => prev.includes(newYear) ? prev : [newYear, ...prev]);
                   setNewlyAddedYear(newYear);
                   setTimeout(() => setNewlyAddedYear(null), 1000);
                   setToast({ message: `Año ${newYear} agregado exitosamente`, type: 'success' });
