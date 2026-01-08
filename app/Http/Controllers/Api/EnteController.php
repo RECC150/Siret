@@ -96,14 +96,14 @@ class EnteController extends Controller
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
                 // store in public disk (storage/app/public/entes)
                 $path = $file->storeAs('entes', $filename, 'public');
-                // returns something like /storage/entes/filename or a full URL
-                $storageUrl = Storage::url($path);
-                if (preg_match('/^https?:\/\//i', $storageUrl)) {
-                    $imgPath = $storageUrl;
-                } else {
-                    $appUrl = rtrim(config('app.url', ''), '/');
-                    $imgPath = ($appUrl ? $appUrl : '') . $storageUrl;
-                }
+
+                // Build API host URLs as requested by deployment (primary + fallback)
+                $apiHost = 'https://api.siret-graficas-interactivas.sifbcs.online';
+                // Primary: https://api.../storage/<filename>
+                $imgPath = $apiHost . '/storage/' . $filename;
+                // Also store a fallback path in case needed by the frontend logic (not saved to DB)
+                $fallbackStoragePath = $apiHost . '/storage/app/public/' . $filename;
+                // Note: we save $imgPath in DB so frontend gets the api host URL without /entes/
             }
 
             $link = trim($request->input('link', '')) ?: null;
@@ -163,14 +163,11 @@ class EnteController extends Controller
                 $filename = bin2hex(random_bytes(8)) . '.' . $extension;
                 // store in public disk (storage/app/public/entes)
                 $path = $file->storeAs('entes', $filename, 'public');
-                // returns something like /storage/entes/filename or a full URL
-                $storageUrl = Storage::url($path);
-                if (preg_match('/^https?:\/\//i', $storageUrl)) {
-                    $imgPath = $storageUrl;
-                } else {
-                    $appUrl = rtrim(config('app.url', ''), '/');
-                    $imgPath = ($appUrl ? $appUrl : '') . $storageUrl;
-                }
+
+                // Build API host URLs as requested by deployment
+                $apiHost = 'https://api.siret-graficas-interactivas.sifbcs.online';
+                $imgPath = $apiHost . '/storage/' . $filename;
+                $fallbackStoragePath = $apiHost . '/storage/app/public/' . $filename;
             }
 
             $link = trim($request->input('link', '')) ?: null;
