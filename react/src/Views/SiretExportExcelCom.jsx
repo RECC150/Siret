@@ -15,6 +15,7 @@ export default function SiretExportExcel(){
 	const [excelUrl, setExcelUrl] = useState(null);
 	const [previewData, setPreviewData] = useState([]);
 	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(false);
 
     // UI
     const [sidebarVisible, setSidebarVisible] = useState(true);
@@ -24,6 +25,7 @@ export default function SiretExportExcel(){
 		setError(null);
 
 		const load = async () => {
+			setLoading(true);
 			try {
 				const [compRes, entesRes] = await Promise.all([
 				axiosClient.get(`/compliances`),
@@ -47,6 +49,8 @@ export default function SiretExportExcel(){
             } catch (e) {
                 console.error(e);
                 setError('No se pudieron cargar los datos.');
+            } finally {
+            	setLoading(false);
             }
         };
         load();
@@ -439,7 +443,7 @@ export default function SiretExportExcel(){
             <motion.main style={contentStyle} initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:.4 }}>
                 <motion.div initial={{ scale:.98, opacity:0 }} animate={{ scale:1, opacity:1 }} transition={{ duration:.35 }} style={{ background:'#fff', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.08)', padding:32 }}>
                     <h3 style={{ marginTop:0, fontWeight:800, color:'#2c3e50', letterSpacing:.5 }}>Exportación Excel {years.length > 0 && `(${years.join(', ')})`}</h3>
-                    {error && <p style={{ color:'#dc3545', fontWeight:600 }}>{error}</p>}
+                    {!loading && error && <p style={{ color:'#dc3545', fontWeight:600 }}>{error}</p>}
                     {years.length > 0 && (
                         <>
 							{previewData.length>0 && (

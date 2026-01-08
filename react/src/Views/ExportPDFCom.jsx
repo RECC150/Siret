@@ -4,6 +4,12 @@ import jsPDF from 'jspdf';
 import asebcsLogo from '../assets/asebcs.jpg';
 import axiosClient from '../axios-client';
 
+import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import jsPDF from 'jspdf';
+import asebcsLogo from '../assets/asebcs.jpg';
+import axiosClient from '../axios-client';
+
 export default function SiretExportPDF(){
   const params = new URLSearchParams(window.location.search);
   const yearsParam = params.get('years'); // "2033-2034-2035"
@@ -14,6 +20,7 @@ export default function SiretExportPDF(){
   const [compliances, setCompliances] = useState([]);
   const [entes, setEntes] = useState([]);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [pdfReady, setPdfReady] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -23,6 +30,7 @@ export default function SiretExportPDF(){
   useEffect(() => {
     if (years.length === 0) return;
     const load = async () => {
+      setLoading(true);
       setError(null);
       try {
         const [compRes, entesRes] = await Promise.all([
@@ -47,6 +55,8 @@ export default function SiretExportPDF(){
       } catch (e) {
         setError('No se pudieron cargar los datos.');
         console.error(e);
+      } finally {
+        setLoading(false);
       }
     };
     load();
@@ -787,7 +797,7 @@ export default function SiretExportPDF(){
             <p style={{ color:'#dc3545', fontWeight:600 }}>Selecciona años desde la página anterior.</p>
           </div>
         )}
-        {years && years.length > 0 && error && (
+        {years && years.length > 0 && !loading && error && (
           <div style={{ padding: 32 }}>
             <p style={{ color:'#dc3545' }}>{error}</p>
           </div>
